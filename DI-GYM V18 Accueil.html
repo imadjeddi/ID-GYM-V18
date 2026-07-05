@@ -1,0 +1,3594 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DI-GYM V14 — Outil diagnostique EPS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Dancing+Script:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  /* ═══════════════════════════════════════════════════════
+     THÈME CLAIR (défaut) — variables sémantiques
+     ═══════════════════════════════════════════════════════ */
+  :root {
+    /* Palette fixe (identités couleur — ne pas thémer) */
+    --bleu:    #1B3A5C;
+    --bleu-m:  #2B5F8E;
+    --bleu-l:  #D6E8F5;
+    --or:      #C8882A;
+    --or-l:    #FDF3E3;
+    --rouge:   #C0392B;
+    --rouge-l: #FDECEA;
+    --orange:  #D97706;
+    --orange-l:#FEF3C7;
+    --vert:    #1A6B3A;
+    --vert-l:  #D1FAE5;
+    --rose:    #E31C79;
+    --rose-d:  #B8125F;
+    --rose-l:  #FDE9F1;
+
+    /* Variables sémantiques — thémables */
+    --bg-page:    #F4F6F8;   /* fond général */
+    --bg-card:    #FFFFFF;   /* fond des cartes */
+    --bg-input:   #F4F6F8;   /* fond des champs */
+    --bg-input-f: #FFFFFF;   /* fond focus */
+    --bg-session: #D6E8F5;   /* fond barre session */
+    --bg-header-l:#D6E8F5;   /* fond seance-header, slider-preview */
+    --bg-axe:     #FFFFFF;   /* fond axe-card */
+    --bg-axe-sel: #D6E8F5;   /* fond axe-card sélectionné */
+    --bg-cell-a:  rgba(192,57,43,.06);
+    --bg-cell-b:  rgba(217,119,6,.06);
+    --bg-cell-c:  rgba(26,107,58,.06);
+
+    --texte:      #1A2535;   /* texte principal */
+    --texte-s:    #555555;   /* texte secondaire */
+    --texte-m:    #888888;   /* texte discret */
+    --blanc:      #FFFFFF;
+
+    --bord:       #CBD5E1;   /* bordures générales */
+    --bord-card:  transparent;
+
+    --shadow-card: 0 1px 4px rgba(0,0,0,.07);
+
+    /* Transition globale thème */
+    --transition-theme: background .3s ease, color .3s ease, border-color .3s ease, box-shadow .3s ease;
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     THÈME SOMBRE — surcharge des variables sémantiques
+     ═══════════════════════════════════════════════════════ */
+  html.dark {
+    --bg-page:    #0F1923;
+    --bg-card:    #1A2535;
+    --bg-input:   #243044;
+    --bg-input-f: #2D3D55;
+    --bg-session: #162030;
+    --bg-header-l:#1E3050;
+    --bg-axe:     #1E2D42;
+    --bg-axe-sel: #1E3050;
+    --bg-cell-a:  rgba(192,57,43,.14);
+    --bg-cell-b:  rgba(217,119,6,.14);
+    --bg-cell-c:  rgba(26,107,58,.14);
+
+    --texte:      #E2EAF4;
+    --texte-s:    #A8BACF;
+    --texte-m:    #6B8299;
+    --blanc:      #E2EAF4;   /* texte "blanc" sur fonds sombres */
+
+    --bord:       #2E4260;
+    --bord-card:  #2E4260;
+
+    --shadow-card: 0 1px 6px rgba(0,0,0,.35);
+
+    /* Ajustements palette légère pour lisibilité en mode sombre */
+    --bleu-l:  #1E3050;
+    --or-l:    #2C2010;
+    --rouge-l: #2A1515;
+    --orange-l:#2A1E0A;
+    --vert-l:  #0F2018;
+    --rose-l:  #2A1424;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg-page);
+    color: var(--texte);
+    min-width: 360px;
+    font-size: 14px;
+    transition: var(--transition-theme);
+  }
+
+  /* HEADER */
+  header {
+    background: var(--bleu);
+    color: var(--blanc);
+    padding: 14px 20px 10px;
+    border-bottom: 3px solid var(--or);
+  }
+  header h1 { font-size: 1.1rem; font-weight: 700; letter-spacing: .5px; }
+  header p  { font-size: .78rem; opacity: .75; margin-top: 2px; }
+
+  /* STEPPER */
+  .stepper {
+    display: flex;
+    background: var(--bleu);
+    padding: 0 20px 12px;
+    gap: 4px;
+    overflow-x: auto;
+  }
+  /* Masqué sur la page d'accueil / configuration : n'apparaît qu'après "Commencer le diagnostic" */
+  .stepper.stepper-hidden { display: none; }
+  .step {
+    flex: 1; min-width: 70px;
+    text-align: center;
+    padding: 6px 4px;
+    border-radius: 6px;
+    font-size: .72rem;
+    font-weight: 600;
+    cursor: default;
+    color: rgba(255,255,255,.45);
+    border: 1px solid rgba(255,255,255,.15);
+    transition: background .2s, color .2s;
+    white-space: nowrap;
+  }
+  .step.active  { background: var(--or); color: var(--blanc); border-color: var(--or); }
+  .step.done    { background: rgba(255,255,255,.15); color: var(--blanc); border-color: rgba(255,255,255,.3); }
+  .step span    { display: block; font-size: .65rem; font-weight: 400; opacity: .8; }
+
+  /* MAIN */
+  main { padding: 16px; max-width: 1200px; margin: 0 auto; }
+
+  /* SECTIONS */
+  .section { display: none; }
+  .section.visible { display: block; }
+
+  /* CARDS */
+  .card {
+    background: var(--bg-card);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 14px;
+    box-shadow: var(--shadow-card);
+    border: 1px solid var(--bord-card);
+    transition: var(--transition-theme);
+  }
+  .card-title {
+    font-size: .85rem;
+    font-weight: 700;
+    color: var(--bleu);
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--bleu-l);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .badge {
+    background: var(--bleu);
+    color: var(--blanc);
+    border-radius: 12px;
+    padding: 2px 8px;
+    font-size: .68rem;
+    font-weight: 700;
+  }
+
+  /* FORMULAIRE */
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr repeat(5, 60px) repeat(5, 52px);
+    gap: 4px;
+    align-items: center;
+    margin-bottom: 4px;
+  }
+  .form-grid.header-row {
+    font-size: .68rem;
+    font-weight: 700;
+    color: var(--bleu-m);
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--gris-m);
+  }
+
+  /* ── EN-TÊTE MULTI-NIVEAUX ─────────────────────────────────────────
+     Même grille que .form-grid : 1fr + 5×60px + 5×52px = 11 colonnes
+     Col 1  = Prénom  (1fr)
+     Col 2  = Org/Esp (60px)
+     Col 3  = R.AV    (60px)   ┐
+     Col 4  = R.AR    (60px)   │ Exécution (cols 3–7)
+     Col 5  = RV.S    (60px)   │
+     Col 6  = RV.D    (60px)   │
+     Col 7  = Attit.  (52px)   ┘
+     Col 8  = Diff.A  (52px)
+     Col 9  = Diff.B  (52px)
+     Col 10 = Diff.C  (52px)
+     Col 11 = Comp.   (52px)
+  ──────────────────────────────────────────────────────────────────── */
+  .header-multi-wrap {
+    /* 11 colonnes identiques au .form-grid */
+    display: grid;
+    grid-template-columns: 1fr repeat(5, 60px) repeat(5, 52px);
+    /* 3 rangées d'en-tête : L1 (Exécution) / L2 (Roulement…) / L3 (R.AV…) */
+    grid-template-rows: auto auto auto;
+    gap: 0 4px;                 /* même column-gap que .form-grid */
+    margin-bottom: 4px;
+    border-bottom: 2px solid var(--bleu-m);
+    font-size: .68rem;
+    font-weight: 700;
+    color: var(--bleu-m);
+  }
+
+  /* ── Cellules L1 ── */
+  /* Prénom — occupe col 1, lignes 1–3 */
+  .hmw-prenom {
+    grid-column: 1; grid-row: 1 / 4;
+    display: flex; align-items: flex-end;
+    padding: 0 0 5px 0;
+  }
+  /* Org/Esp — col 2, lignes 1–3 */
+  .hmw-orgesp {
+    grid-column: 2; grid-row: 1 / 4;
+    display: flex; align-items: flex-end; justify-content: center;
+    padding: 0 0 5px 0;
+    text-align: center;
+  }
+  /* EXÉCUTION — cols 3–7, ligne 1 */
+  .hmw-execution {
+    grid-column: 3 / 8; grid-row: 1;
+    text-align: center;
+    background: var(--bleu);
+    color: var(--blanc);
+    padding: 5px 4px 4px;
+    border-radius: 6px 6px 0 0;
+    letter-spacing: .3px;
+    margin: 0 1px;
+  }
+  /* Diff.A/B/C/Comp — cols 8–11, lignes 1–3 */
+  .hmw-diff-a  { grid-column: 8;  grid-row: 1 / 4; display:flex;align-items:flex-end;justify-content:center;padding:0 0 5px;text-align:center; }
+  .hmw-diff-b  { grid-column: 9;  grid-row: 1 / 4; display:flex;align-items:flex-end;justify-content:center;padding:0 0 5px;text-align:center; }
+  .hmw-diff-c  { grid-column: 10; grid-row: 1 / 4; display:flex;align-items:flex-end;justify-content:center;padding:0 0 5px;text-align:center; }
+  .hmw-comp    { grid-column: 11; grid-row: 1 / 4; display:flex;align-items:flex-end;justify-content:center;padding:0 0 5px;text-align:center; }
+
+  /* ── Cellules L2 ── */
+  /* ROULEMENT — cols 3–4, ligne 2 */
+  .hmw-roulement {
+    grid-column: 3 / 5; grid-row: 2;
+    text-align: center;
+    background: var(--bleu-l);
+    color: var(--bleu);
+    padding: 3px 4px;
+    border-left: 1px solid rgba(43,95,142,.25);
+    border-right: 1px solid rgba(43,95,142,.25);
+    margin: 0 1px;
+  }
+  /* RENVERSEMENT — cols 5–6, ligne 2 */
+  .hmw-renversement {
+    grid-column: 5 / 7; grid-row: 2;
+    text-align: center;
+    background: var(--bleu-l);
+    color: var(--bleu);
+    padding: 3px 4px;
+    border-left: 1px solid rgba(43,95,142,.25);
+    border-right: 1px solid rgba(43,95,142,.25);
+    margin: 0 1px;
+  }
+  /* ATTITUDE — col 7, lignes 2–3 (rowspan=2) */
+  .hmw-attitude {
+    grid-column: 7; grid-row: 2 / 4;
+    display: flex; align-items: center; justify-content: center;
+    text-align: center;
+    background: var(--bleu-l);
+    color: var(--bleu);
+    padding: 3px 2px;
+    border-left: 1px solid rgba(43,95,142,.25);
+    margin: 0 1px;
+  }
+
+  /* ── Cellules L3 (labels individuels) ── */
+  .hmw-rav  { grid-column: 3; grid-row: 3; text-align:center; padding: 3px 2px 5px; }
+  .hmw-rar  { grid-column: 4; grid-row: 3; text-align:center; padding: 3px 2px 5px; }
+  .hmw-rvs  { grid-column: 5; grid-row: 3; text-align:center; padding: 3px 2px 5px; }
+  .hmw-rvd  { grid-column: 6; grid-row: 3; text-align:center; padding: 3px 2px 5px; }
+  .form-grid input[type="text"],
+  .form-grid input[type="number"] {
+    width: 100%;
+    padding: 5px 6px;
+    border: 1px solid var(--bord);
+    border-radius: 5px;
+    font-size: .78rem;
+    background: var(--bg-input);
+    color: var(--texte);
+    transition: var(--transition-theme);
+  }
+  .form-grid input:focus {
+    outline: 2px solid var(--bleu-m);
+    background: var(--bg-input-f);
+  }
+  select.deg {
+    width: 100%;
+    padding: 5px 2px;
+    border: 1px solid var(--bord);
+    border-radius: 5px;
+    font-size: .78rem;
+    background: var(--bg-input);
+    color: var(--texte);
+    cursor: pointer;
+    transition: var(--transition-theme);
+  }
+  .err-cell { font-size: .65rem; color: var(--rouge); }
+
+  /* BOUTONS */
+  .btn {
+    display: inline-block;
+    padding: 9px 18px;
+    border-radius: 7px;
+    font-size: .8rem;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    transition: opacity .15s, transform .1s;
+  }
+  .btn:active { transform: scale(.97); }
+  .btn:disabled { opacity: .38; cursor: not-allowed; }
+  .btn-primary { background: var(--bleu); color: var(--blanc); }
+  .btn-or      { background: var(--or);   color: var(--blanc); }
+  .btn-vert    { background: var(--vert); color: var(--blanc); }
+  .btn-rose    { background: linear-gradient(135deg, var(--rose) 0%, var(--rose-d) 100%); color: var(--blanc); }
+  .btn-outline {
+    background: var(--bg-card);
+    color: var(--bleu);
+    border: 2px solid var(--bleu);
+  }
+  .btn-sm { padding: 5px 10px; font-size: .72rem; }
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; align-items: center; }
+
+  /* UPLOAD ZONE */
+  .upload-zone {
+    border: 2px dashed var(--bleu-m);
+    border-radius: 8px;
+    padding: 18px;
+    text-align: center;
+    color: var(--bleu-m);
+    font-size: .8rem;
+    cursor: pointer;
+    background: var(--bleu-l);
+    transition: background .2s;
+    margin-bottom: 10px;
+  }
+  .upload-zone:hover { background: var(--bg-header-l); }
+  .upload-zone input { display: none; }
+
+  /* TABLEAUX */
+  .tbl-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: .75rem; }
+  th { background: var(--bleu); color: #fff; padding: 7px 8px; text-align: left; white-space: nowrap; }
+  td { padding: 6px 8px; border-bottom: 1px solid var(--bord); vertical-align: top; color: var(--texte); transition: var(--transition-theme); }
+  tr:last-child td { border-bottom: none; }
+  tr.row-A td { background: var(--rouge-l); }
+  tr.row-B td { background: var(--orange-l); }
+  tr.row-C td { background: var(--vert-l); }
+  tr:hover td { filter: brightness(.96); }
+
+  /* PROFIL BADGES */
+  .profil-A { display:inline-block; background: var(--rouge);   color: #fff; padding: 2px 7px; border-radius: 4px; font-weight: 700; font-size: .7rem; }
+  .profil-B { display:inline-block; background: var(--orange);  color: #fff; padding: 2px 7px; border-radius: 4px; font-weight: 700; font-size: .7rem; }
+  .profil-C { display:inline-block; background: var(--vert);    color: #fff; padding: 2px 7px; border-radius: 4px; font-weight: 700; font-size: .7rem; }
+
+  /* STAT CARDS */
+  .stat-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  .stat-card {
+    flex: 1; min-width: 130px;
+    border-radius: 8px;
+    padding: 12px;
+    text-align: center;
+  }
+  .stat-card .val { font-size: 1.6rem; font-weight: 800; }
+  .stat-card .lbl { font-size: .7rem; opacity: .8; }
+  .stat-A { background: var(--rouge-l); color: var(--rouge); }
+  .stat-B { background: var(--orange-l); color: var(--orange); }
+  .stat-C { background: var(--vert-l);   color: var(--vert); }
+  .stat-n { background: var(--bleu-l);   color: var(--bleu); }
+
+  /* AXE CASES */
+  .axe-card {
+    border: 2px solid var(--bord);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 8px;
+    background: var(--bg-axe);
+    transition: border-color .2s, background .2s;
+    cursor: pointer;
+  }
+  .axe-card.selected {
+    border-color: var(--bleu-m);
+    background: var(--bg-axe-sel);
+  }
+  .axe-card label { cursor: pointer; display: flex; gap: 10px; align-items: flex-start; }
+  .axe-card input[type="checkbox"] { margin-top: 2px; flex-shrink: 0; width: 16px; height: 16px; cursor: pointer; }
+  .axe-title { font-weight: 700; font-size: .82rem; color: var(--bleu-m); }
+  .axe-meta  { font-size: .72rem; color: var(--texte-s); margin-top: 3px; }
+  .axe-pert  { font-size: .7rem; font-weight: 700; color: var(--or); }
+
+  /* 📋 ÉLÉMENTS GYMNIQUES RECOMMANDÉS */
+  .reco-banner {
+    background: var(--rose-l);
+    border: 1px solid var(--rose);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: .78rem;
+    color: var(--texte);
+    line-height: 1.5;
+    margin-bottom: 14px;
+  }
+  .reco-banner strong { color: var(--rose); }
+  .famille-elements {
+    border: 1px solid var(--bord);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    background: var(--bg-card);
+    overflow: hidden;
+  }
+  .famille-elements summary {
+    cursor: pointer;
+    padding: 10px 14px;
+    font-weight: 700;
+    font-size: .82rem;
+    color: var(--bleu);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    list-style: none;
+  }
+  .famille-elements summary::-webkit-details-marker { display: none; }
+  .famille-elements summary::before { content: "▸"; margin-right: 8px; color: var(--rose); transition: transform .15s; }
+  .famille-elements[open] summary::before { transform: rotate(90deg); display: inline-block; }
+  .fam-count { font-size: .68rem; font-weight: 500; color: var(--texte-m); white-space: nowrap; }
+  .fam-desc { font-size: .74rem; color: var(--texte-s); padding: 0 14px 10px; line-height: 1.5; }
+  .fam-elements-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 8px;
+    padding: 0 14px 14px;
+  }
+  .el-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--bord);
+    border-radius: 7px;
+    padding: 7px 10px;
+    font-size: .74rem;
+    cursor: pointer;
+    background: var(--bg-input);
+    transition: border-color .15s, background .15s;
+  }
+  .el-chip.actif { border-color: var(--bleu-m); background: var(--bg-axe-sel); }
+  .el-chip input[type="checkbox"] { flex-shrink: 0; width: 14px; height: 14px; cursor: pointer; }
+  .el-diff {
+    flex-shrink: 0;
+    width: 20px; height: 20px;
+    border-radius: 5px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: .68rem;
+    color: var(--blanc);
+  }
+  .el-chip.diff-A .el-diff { background: var(--vert); }
+  .el-chip.diff-B .el-diff { background: var(--bleu-m); }
+  .el-chip.diff-C .el-diff { background: var(--or); }
+  .el-chip.diff-D .el-diff { background: var(--orange); }
+  .el-chip.diff-E .el-diff { background: var(--rouge); }
+  .el-nom { flex: 1; color: var(--texte); }
+  .el-nom em { font-style: normal; color: var(--texte-m); }
+  .el-badge {
+    flex-shrink: 0;
+    font-size: .62rem;
+    font-weight: 700;
+    color: var(--rose);
+    white-space: nowrap;
+  }
+  .el-badge-conso { color: var(--or); }
+
+  /* SLIDER */
+  .slider-wrap { margin: 16px 0; }
+  input[type="range"] {
+    width: 100%; accent-color: var(--bleu-m);
+    height: 6px; cursor: pointer;
+  }
+  .slider-label { font-size: .85rem; font-weight: 700; color: var(--bleu); margin-bottom: 6px; }
+  .slider-preview {
+    background: var(--bleu-l);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-top: 10px;
+    font-size: .78rem;
+    color: var(--texte);
+    transition: var(--transition-theme);
+  }
+  .slider-preview .seq-line { padding: 3px 0; border-bottom: 1px solid rgba(0,0,0,.06); }
+  .slider-preview .seq-line:last-child { border-bottom: none; }
+
+  /* PLANIF */
+  .seq-block {
+    border: 2px solid var(--bord);
+    border-radius: 10px;
+    margin-bottom: 14px;
+    overflow: hidden;
+  }
+  .seq-header {
+    background: var(--bleu);
+    color: var(--blanc);
+    padding: 10px 14px;
+    font-size: .82rem;
+    font-weight: 700;
+  }
+  .seq-header span { font-weight: 400; opacity: .8; font-size: .76rem; }
+  .seance-row {
+    display: grid;
+    grid-template-columns: 36px 1fr 1fr 1fr 1fr 1fr;
+    gap: 0;
+    border-bottom: 1px solid var(--bord);
+    font-size: .72rem;
+  }
+  .seance-row:last-child { border-bottom: none; }
+  .seance-row.seance-header { background: var(--bg-header-l); font-weight: 700; font-size: .68rem; color: var(--bleu-m); }
+  .seance-cell {
+    padding: 8px 8px;
+    border-right: 1px solid var(--bord);
+    color: var(--texte);
+    transition: var(--transition-theme);
+  }
+  .seance-cell:last-child { border-right: none; }
+  .seance-num {
+    background: var(--bleu);
+    color: #fff;
+    font-weight: 800;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .cell-A { background: var(--bg-cell-a); }
+  .cell-B { background: var(--bg-cell-b); }
+  .cell-C { background: var(--bg-cell-c); }
+  .cell-label { font-weight: 700; font-size: .65rem; margin-bottom: 3px; }
+  .cell-sa { font-style: italic; color: var(--bleu-m); font-size: .68rem; }
+  .cell-cr { font-size: .65rem; color: var(--texte-s); margin-top: 2px; }
+  .indicatif {
+    background: var(--or-l);
+    border-left: 3px solid var(--or);
+    padding: 5px 10px;
+    font-size: .7rem;
+    color: var(--or);
+    margin: 0;
+  }
+
+  /* RÉSUMÉ */
+  .resume-card {
+    background: linear-gradient(135deg, var(--bleu) 0%, var(--bleu-m) 100%);
+    color: var(--blanc);
+    border-radius: 10px;
+    padding: 16px;
+    margin-top: 14px;
+    font-size: .8rem;
+  }
+  .resume-card strong { color: var(--or); }
+
+  /* DÉCISION BANNER */
+  .decision-banner {
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: .82rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
+  .dec-A { background: var(--rouge-l); color: var(--rouge); border-left: 4px solid var(--rouge); }
+  .dec-B { background: var(--orange-l); color: var(--orange); border-left: 4px solid var(--orange); }
+  .dec-C { background: var(--vert-l); color: var(--vert); border-left: 4px solid var(--vert); }
+
+  /* IMPORT INFO */
+  .import-info { font-size: .72rem; color: var(--texte-m); margin-top: 6px; }
+  .import-info.error { color: var(--rouge); }
+  .import-info.success { color: var(--vert); }
+
+  /* PRINT */
+  @media print {
+    .no-print, header .stepper, .stepper, .btn-row, input, select, .upload-zone, .step { display: none !important; }
+    .section { display: block !important; }
+    body { background: #fff; }
+    .card { box-shadow: none; border: 1px solid #ccc; }
+    th { background: #333 !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+
+  @media (max-width: 600px) {
+    .seance-row { grid-template-columns: 28px 1fr 1fr; }
+    .seance-row .seance-cell:nth-child(n+5) { display: none; }
+    .form-grid { grid-template-columns: 1fr repeat(3, 52px) repeat(3, 44px); }
+    .form-grid > *:nth-child(5),
+    .form-grid > *:nth-child(6) { display: none; }
+    .header-multi-wrap {
+      grid-template-columns: 1fr repeat(3, 52px) repeat(3, 44px);
+    }
+    .hmw-execution    { grid-column: 3 / 6; }
+    .hmw-roulement    { grid-column: 3 / 5; }
+    .hmw-renversement { display: none; }
+    .hmw-attitude     { grid-column: 5; }
+    .hmw-rvs, .hmw-rvd { display: none; }
+    .hmw-diff-a  { grid-column: 6; }
+    .hmw-diff-b  { grid-column: 7; }
+    .hmw-diff-c  { display: none; }
+    .hmw-comp    { display: none; }
+  }
+
+  /* ── TOAST ── */
+  #_di_toast {
+    position: fixed; bottom: 20px; right: 20px; z-index: 9999;
+    padding: 10px 18px; border-radius: 8px; font-size: .82rem;
+    font-weight: 700; box-shadow: 0 3px 14px rgba(0,0,0,.22);
+    transition: opacity .4s; opacity: 0; pointer-events: none;
+  }
+
+  /* ── BARRE SESSION ── */
+  .session-bar {
+    background: var(--bg-session);
+    border-bottom: 1px solid var(--bord);
+    padding: 8px 20px;
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: .76rem;
+    color: var(--texte);
+    transition: var(--transition-theme);
+  }
+  .session-bar label { font-weight: 600; }
+  .session-bar input[type="text"],
+  .session-bar input[type="date"] {
+    border: 1px solid var(--bord);
+    border-radius: 5px;
+    padding: 3px 8px;
+    font-size: .76rem;
+    background: var(--bg-card);
+    color: var(--texte);
+    transition: var(--transition-theme);
+  }
+  .session-bar input[type="text"] { width: 150px; }
+  .session-bar input[type="date"] { width: 140px; }
+  #saveStatus {
+    margin-left: auto;
+    font-size: .72rem;
+    color: var(--vert);
+    font-weight: 700;
+    opacity: 0;
+    transition: opacity .5s;
+  }
+  #saveStatus.visible { opacity: 1; }
+
+  /* ── COMPTEUR ÉLÈVES ── */
+  #compteurEleves {
+    font-size: .75rem;
+    font-weight: 700;
+    color: var(--bleu-m);
+    background: var(--bleu-l);
+    border-radius: 20px;
+    padding: 3px 12px;
+    margin-left: auto;
+  }
+
+  /* ── BADGE PERTINENCE AXE ── */
+  .pert-high { color: var(--rouge); font-weight: 700; }
+  .pert-mid  { color: var(--orange); font-weight: 700; }
+  .pert-low  { color: #888; }
+
+  /* ── BARRE PROGRESSION OBSERVABLE ── */
+  .obs-bar-wrap { display: flex; align-items: center; gap: 8px; }
+  .obs-bar { flex: 1; height: 8px; background: var(--bord); border-radius: 4px; overflow: hidden; }
+  .obs-bar-fill { height: 100%; border-radius: 4px; transition: width .4s; }
+  .obs-bar-val { font-size: .72rem; font-weight: 700; min-width: 38px; text-align: right; color: var(--texte); }
+
+  /* ── TOGGLE THÈME CLAIR / SOMBRE ── */
+  #themeToggle {
+    position: fixed;
+    top: 12px;
+    right: 16px;
+    z-index: 10000;
+    background: var(--bg-card);
+    border: 2px solid var(--bord);
+    color: var(--texte);
+    border-radius: 24px;
+    padding: 5px 14px 5px 10px;
+    font-size: .8rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.15);
+    transition: background .3s, border-color .3s, color .3s, box-shadow .3s;
+    white-space: nowrap;
+  }
+  #themeToggle:hover {
+    box-shadow: 0 3px 12px rgba(0,0,0,.25);
+    border-color: var(--bleu-m);
+  }
+  #themeToggle .th-icon { font-size: 1rem; line-height: 1; }
+  #themeToggle .th-label { font-size: .72rem; }
+
+  /* Compteur élèves — fond thémable */
+  #compteurEleves {
+    font-size: .75rem;
+    font-weight: 700;
+    color: var(--bleu-m);
+    background: var(--bleu-l);
+    border-radius: 20px;
+    padding: 3px 12px;
+    margin-left: auto;
+  }
+
+  /* Pert-low lisible en dark */
+  .pert-low { color: var(--texte-m); }
+
+  /* ── BOUTON FICHE TERRAIN ── */
+  .btn-terrain   { background: #0E7490; color: #fff; } /* 📄 Imprimer   — cyan foncé   */
+  .btn-save-html { background: #0369A1; color: #fff; } /* 💾 HTML       — bleu         */
+  .btn-pdf       { background: #B91C1C; color: #fff; } /* 📑 PDF        — rouge        */
+  .btn-ia        { background: #7C3AED; color: #fff; } /* 🤖 Guide IA   — violet       */
+
+  /* ── MODALE GUIDE IA ── */
+  #modalIA {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 20000;
+    background: rgba(0,0,0,.55);
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    backdrop-filter: blur(3px);
+    animation: fadeInOverlay .2s ease;
+  }
+  #modalIA.open { display: flex; }
+
+  @keyframes fadeInOverlay {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  .modal-box {
+    background: var(--bg-card);
+    color: var(--texte);
+    border: 1px solid var(--bord);
+    border-radius: 14px;
+    padding: 28px 24px 22px;
+    max-width: 560px;
+    width: 100%;
+    box-shadow: 0 8px 40px rgba(0,0,0,.35);
+    position: relative;
+    animation: slideUp .22s ease;
+    transition: background .3s, color .3s;
+  }
+
+  @keyframes slideUp {
+    from { transform: translateY(18px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+
+  .modal-title {
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--bleu-m);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .modal-subtitle {
+    font-size: .76rem;
+    color: var(--texte-s);
+    margin-bottom: 16px;
+    line-height: 1.5;
+  }
+
+  .modal-prompt {
+    background: var(--bg-input);
+    border: 1.5px solid var(--bord);
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: .82rem;
+    line-height: 1.7;
+    color: var(--texte);
+    white-space: pre-wrap;
+    word-break: break-word;
+    user-select: all;
+    margin-bottom: 16px;
+    transition: var(--transition-theme);
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .modal-close-x {
+    position: absolute;
+    top: 14px;
+    right: 16px;
+    background: none;
+    border: none;
+    font-size: 1.3rem;
+    color: var(--texte-m);
+    cursor: pointer;
+    line-height: 1;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: background .15s;
+  }
+  .modal-close-x:hover { background: var(--bg-input); }
+
+  #copyConfirm {
+    font-size: .75rem;
+    font-weight: 700;
+    color: var(--vert);
+    opacity: 0;
+    transition: opacity .4s;
+    margin-left: 4px;
+  }
+  #copyConfirm.visible { opacity: 1; }
+
+  @media print {
+    #modalIA { display: none !important; }
+  }
+
+  @media (max-width: 480px) {
+    .modal-box { padding: 20px 14px 16px; }
+    .modal-prompt { font-size: .76rem; }
+  }
+
+  /* ── BANNIÈRE AUTEURS ── */
+  .auteurs-banner {
+    background: linear-gradient(135deg, var(--rose) 0%, var(--rose-d) 100%);
+    color: #fff;
+    text-align: center;
+    padding: 14px 20px 12px;
+    border-bottom: 3px solid var(--or);
+  }
+  .auteurs-banner .titre-principal {
+    font-size: 1.1rem;
+    font-weight: 800;
+    letter-spacing: .4px;
+    margin-bottom: 1px;
+  }
+  .auteurs-banner .sous-titre {
+    font-size: .78rem;
+    opacity: .8;
+    margin-bottom: 8px;
+  }
+  .auteurs-banner .concu-par {
+    font-size: .65rem;
+    opacity: .6;
+    text-transform: uppercase;
+    letter-spacing: .8px;
+    margin-bottom: 5px;
+  }
+  .auteurs-banner .auteurs-liste {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+  }
+  .auteurs-banner .auteurs-liste span {
+    background: rgba(255,255,255,.13);
+    border: 1px solid rgba(255,255,255,.22);
+    border-radius: 20px;
+    padding: 2px 11px;
+    font-size: .73rem;
+    font-weight: 600;
+  }
+
+  /* ── SELECT ENSEIGNANT ── */
+  #sessSelectEnseignant {
+    border: 1px solid var(--bord);
+    border-radius: 5px;
+    padding: 3px 8px;
+    font-size: .76rem;
+    background: var(--bg-card);
+    color: var(--texte);
+    cursor: pointer;
+    min-width: 180px;
+    transition: var(--transition-theme);
+  }
+  #sessAutreWrap {
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: max-height .3s ease, opacity .3s ease, margin .3s ease;
+    margin-top: 0;
+  }
+  #sessAutreWrap.visible {
+    max-height: 50px;
+    opacity: 1;
+    margin-top: 4px;
+  }
+  #sessEnseignant {
+    border: 1px solid var(--bord);
+    border-radius: 5px;
+    padding: 3px 8px;
+    font-size: .76rem;
+    background: var(--bg-card);
+    color: var(--texte);
+    width: 180px;
+    transition: var(--transition-theme);
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     PAGE D'ACCUEIL / CONFIGURATION (V14) — Nouvelle mise en page hero
+     ═══════════════════════════════════════════════════════ */
+  .home-wrap { max-width: 1100px; margin: 0 auto; }
+
+  /* ── HERO : titre + image gymnaste ── */
+  .home-hero {
+    display: grid;
+    grid-template-columns: 1.15fr 1fr;
+    gap: 32px;
+    align-items: center;
+    padding: 34px 8px 30px;
+  }
+  @media (max-width: 780px) {
+    .home-hero { grid-template-columns: 1fr; text-align: center; padding-top: 22px; }
+    .home-hero-image { order: -1; }
+  }
+  .home-title {
+    font-family: 'Poppins', 'Segoe UI', sans-serif;
+    font-weight: 800;
+    color: var(--rose);
+    font-size: clamp(2.1rem, 5.2vw, 3.4rem);
+    line-height: 1.05;
+    letter-spacing: .5px;
+    margin: 0;
+  }
+  .home-script {
+    font-family: 'Dancing Script', cursive;
+    font-weight: 700;
+    color: var(--rose);
+    font-size: clamp(1.5rem, 3.2vw, 2.2rem);
+    margin: 2px 0 16px;
+  }
+  .home-title-underline {
+    width: 110px;
+    height: 3px;
+    background: var(--rose);
+    border: none;
+    border-radius: 2px;
+    margin: 0 0 18px;
+    opacity: .65;
+  }
+  @media (max-width: 780px) {
+    .home-title-underline { margin: 0 auto 18px; }
+  }
+  .home-tagline {
+    font-size: .92rem;
+    color: var(--texte-s);
+    max-width: 460px;
+    line-height: 1.55;
+  }
+  @media (max-width: 780px) {
+    .home-tagline { max-width: none; margin: 0 auto; }
+  }
+  .home-hero-image {
+    position: relative;
+    border-radius: 18px;
+    overflow: hidden;
+  }
+  .home-hero-image img {
+    width: 100%;
+    height: 100%;
+    max-height: 380px;
+    object-fit: cover;
+    display: block;
+    border-radius: 18px;
+    box-shadow: 0 12px 30px rgba(227,28,121,.22);
+  }
+
+  /* ── CARTE INFORMATIONS GÉNÉRALES ── */
+  .home-info-card {
+    max-width: 900px;
+    margin: 0 auto 22px;
+    padding: 26px 28px 22px;
+    border-radius: 16px;
+  }
+  .home-info-card .card-title {
+    font-size: 1rem;
+    border-bottom: none;
+    padding-bottom: 0;
+    margin-bottom: 18px;
+    gap: 10px;
+  }
+  .home-info-card .card-title .ci-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px; height: 30px;
+    border-radius: 9px;
+    background: var(--rose);
+    color: var(--blanc);
+    font-size: .95rem;
+    flex-shrink: 0;
+  }
+
+  /* ── CARTE ORIENTATIONS PÉDAGOGIQUES ── */
+  .orientation-card {
+    border: 1px solid var(--rose-l);
+    background: linear-gradient(180deg, var(--bg-card) 0%, var(--rose-l) 220%);
+  }
+  .orientation-card .ci-icon.oi-icon { background: var(--bleu); }
+  .orientation-niveau {
+    font-weight: 800;
+    color: var(--rose);
+    font-size: .88rem;
+    margin-bottom: 6px;
+  }
+  .orientation-objectif {
+    font-size: .82rem;
+    color: var(--texte-s);
+    line-height: 1.55;
+    margin-bottom: 16px;
+  }
+  .orientation-compo {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  .compo-item {
+    flex: 1;
+    min-width: 100px;
+    text-align: center;
+    background: var(--bg-card);
+    border: 1px solid var(--bord);
+    border-radius: 10px;
+    padding: 12px 6px 10px;
+    border-top: 3px solid var(--bleu);
+  }
+  .compo-item.compo-b { border-top-color: var(--or); }
+  .compo-item.compo-c { border-top-color: var(--rose); }
+  .compo-val {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--bleu);
+  }
+  .compo-item.compo-b .compo-val { color: var(--or); }
+  .compo-item.compo-c .compo-val { color: var(--rose); }
+  .compo-label {
+    display: block;
+    font-size: .65rem;
+    color: var(--texte-m);
+    margin-top: 3px;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+  }
+  .orientation-footnote {
+    font-size: .68rem;
+    color: var(--texte-m);
+    line-height: 1.4;
+  }
+
+  /* ── BANDEAU ORIENTATION COMPACT (étapes ② et ④) ── */
+  .orientation-mini {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    background: var(--rose-l);
+    border: 1px solid var(--rose);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: .74rem;
+    color: var(--texte);
+    margin-bottom: 12px;
+  }
+  .orientation-mini.visible { display: flex; flex-wrap: wrap; }
+  .orientation-mini strong { color: var(--rose); }
+  .home-grid-fields {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px 20px;
+  }
+  @media (max-width: 680px) {
+    .home-grid-fields { grid-template-columns: 1fr; }
+  }
+  .fg-span2 { grid-column: span 2; }
+  .fg-span3 { grid-column: span 3; }
+  @media (max-width: 680px) {
+    .fg-span2, .fg-span3 { grid-column: span 1; }
+  }
+  .field-group { margin-bottom: 0; }
+  .field-group label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    font-size: .76rem;
+    color: var(--texte);
+    margin-bottom: 6px;
+  }
+  .field-group label .fi { font-size: .85rem; }
+  .field-group input[type="text"],
+  .field-group input[type="date"],
+  .field-group select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--bord);
+    border-radius: 8px;
+    font-size: .82rem;
+    background: var(--bg-input);
+    color: var(--texte);
+    transition: var(--transition-theme);
+  }
+  .field-group input:focus,
+  .field-group select:focus {
+    outline: 2px solid var(--rose);
+    background: var(--bg-input-f);
+  }
+  .field-group .field-hint {
+    font-size: .68rem;
+    color: var(--texte-m);
+    margin-top: 4px;
+  }
+
+  /* ── BOUTON CTA ── */
+  .home-cta {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin: 8px 0 4px;
+  }
+  .btn-hero {
+    padding: 16px 42px;
+    font-size: 1rem;
+    border-radius: 14px;
+    box-shadow: 0 8px 22px rgba(227,28,121,.35);
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    line-height: 1.3;
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .btn-hero:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 26px rgba(227,28,121,.42);
+  }
+  .btn-hero .cta-sub {
+    font-size: .68rem;
+    font-weight: 500;
+    opacity: .85;
+  }
+  .home-trust {
+    display: flex;
+    justify-content: center;
+    gap: 18px;
+    flex-wrap: wrap;
+    font-size: .72rem;
+    color: var(--texte-m);
+    margin-top: 4px;
+  }
+
+  /* ── BARRE RÉSUMÉ SESSION (steps 1 à 4) ── */
+  .session-bar .sb-item { font-weight: 600; }
+  .session-bar .sb-item strong { font-weight: 700; color: var(--bleu); }
+
+  /* Entrées Accueil / Configuration cliquables dans le stepper */
+  .step.nav-clic { cursor: pointer; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════
+     BANNIÈRE PRINCIPALE — identité & auteurs
+══════════════════════════════════════════════════════ -->
+<div class="auteurs-banner">
+  <div class="titre-principal">🤸 DI-GYM — Diagnostic Gymnastique au Sol</div>
+  <div class="sous-titre">CRMEF Souss-Massa &nbsp;·&nbsp; ADP 2026 &nbsp;·&nbsp; Section EPS</div>
+  <div class="concu-par">Conçu par</div>
+  <div class="auteurs-liste">
+    <span>Meryem Sabeq</span>
+    <span>Aya Es-Sebyty</span>
+    <span>Latefa Oudbir</span>
+    <span>Imad Jeddi</span>
+  </div>
+</div>
+
+<!-- ── BOUTON THÈME CLAIR / SOMBRE ── -->
+<button id="themeToggle" onclick="basculerTheme()" title="Changer le thème" aria-label="Basculer thème clair/sombre">
+  <span class="th-icon" id="themeIcon">🌙</span>
+  <span class="th-label" id="themeLabel">Mode sombre</span>
+</button>
+
+<!-- ═══════════════════════════════════════════════════════
+     MODALE — GUIDE DE CONVERSION IA
+     Fermable : bouton ✕ · touche Échap · clic extérieur
+════════════════════════════════════════════════════════ -->
+<div id="modalIA" role="dialog" aria-modal="true" aria-labelledby="modalIATitre" onclick="fermerModaleSiDehors(event)">
+  <div class="modal-box">
+
+    <button class="modal-close-x no-print" onclick="fermerModaleIA()" title="Fermer" aria-label="Fermer">✕</button>
+
+    <div class="modal-title" id="modalIATitre">🤖 Guide de conversion IA — Photo → CSV</div>
+    <p class="modal-subtitle">
+      Photographiez votre fiche terrain remplie, envoyez-la à une IA (ChatGPT, Gemini, Claude…)
+      avec le prompt ci-dessous. Vous obtiendrez un fichier CSV prêt à importer dans DI-GYM.
+    </p>
+
+    <div class="modal-prompt" id="promptTexte">Lis ce tableau et convertis-le en fichier CSV.
+Premiere ligne = en-tete des colonnes.
+Signale les cellules illisibles avec [?].
+Ne pas inventer de donnees manquantes.</div>
+
+    <div class="modal-actions">
+      <button class="btn btn-vert btn-sm" onclick="copierPrompt()">📋 Copier le prompt</button>
+      <span id="copyConfirm">✅ Prompt copié dans le presse-papiers</span>
+      <button class="btn btn-outline btn-sm" onclick="fermerModaleIA()" style="margin-left:auto">Fermer</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── BARRE RÉSUMÉ SESSION (affichée pendant les étapes ①→④) ── -->
+<div class="session-bar no-print" id="sessionBarSummary" style="display:none">
+  <span class="sb-item">🏫 <strong id="sbEtablissement">—</strong></span>
+  <span class="sb-item">🏷️ <strong id="sbNiveauGroupe">—</strong></span>
+  <span class="sb-item">👤 <strong id="sbEnseignant">—</strong></span>
+  <span class="sb-item">📅 <strong id="sbDate">—</strong></span>
+  <button class="btn btn-outline btn-sm" onclick="afficherSection(0)">⚙️ Configuration</button>
+  <span id="saveStatus">✅ Sauvegardé</span>
+</div>
+
+<div class="stepper stepper-hidden" id="stepper">
+  <div class="step nav-clic"        id="stCfg" onclick="afficherSection(0)">⚙️ Configuration<span>&nbsp;</span></div>
+  <div class="step" id="st1">① Saisie<span>Terrain</span></div>
+  <div class="step" id="st2">② Axes<span>Prioritaires</span></div>
+  <div class="step" id="st3">③ Paramétrage<span>Séances</span></div>
+  <div class="step" id="st4">④ Planification<span>Dynamique</span></div>
+</div>
+
+<main>
+
+<!-- ═══════════════════════════════════════════════════════ ACCUEIL & CONFIGURATION -->
+<div class="section visible" id="sec0">
+  <div class="home-wrap">
+
+    <div class="home-hero">
+      <div class="home-hero-text">
+        <h1 class="home-title">TEST DIAGNOSTIQUE</h1>
+        <div class="home-script">en gymnastique au sol</div>
+        <hr class="home-title-underline">
+        <p class="home-tagline">Un outil complet pour évaluer, analyser et planifier les apprentissages en gymnastique au sol.</p>
+      </div>
+      <div class="home-hero-image">
+        <img src="https://images.unsplash.com/photo-1777158375313-60eb6dc76413?auto=format&fit=crop&w=1000&q=80" alt="Gymnaste réalisant un saut artistique au sol">
+      </div>
+    </div>
+
+    <div class="card home-info-card">
+      <div class="card-title"><span class="ci-icon">🏫</span> Informations générales</div>
+      <div class="home-grid-fields">
+
+        <div class="field-group fg-span2">
+          <label for="sessEtablissement"><span class="fi">🏫</span> Nom de l'établissement</label>
+          <input type="text" id="sessEtablissement" placeholder="Saisir le nom de l'établissement" oninput="sauvegarderDonnees(true)">
+        </div>
+
+        <div class="field-group">
+          <label for="sessAnnee"><span class="fi">📅</span> Année scolaire</label>
+          <input type="text" id="sessAnnee" placeholder="2026-2027" value="2026-2027" oninput="sauvegarderDonnees(true)">
+        </div>
+
+        <div class="field-group">
+          <label for="sessNiveau"><span class="fi">🎓</span> Niveau scolaire</label>
+          <!-- Liste modifiable : ajouter/retirer des <option> pour d'autres niveaux -->
+          <select id="sessNiveau" onchange="_syncClasseLabel()">
+            <option value="">— Sélectionner —</option>
+            <option value="1AC">1AC</option>
+            <option value="2AC">2AC</option>
+            <option value="3AC">3AC</option>
+          </select>
+          <div class="field-hint">Sélectionner le niveau de la classe</div>
+        </div>
+
+        <div class="field-group">
+          <label for="sessGroupe"><span class="fi">👥</span> Groupe</label>
+          <!-- Liste modifiable : ajouter/retirer des <option> pour d'autres groupes -->
+          <select id="sessGroupe" onchange="_syncClasseLabel()">
+            <option value="">— Sélectionner —</option>
+            <option value="Groupe 1">Groupe 1</option>
+            <option value="Groupe 2">Groupe 2</option>
+            <option value="Groupe 3">Groupe 3</option>
+            <option value="Groupe 4">Groupe 4</option>
+            <option value="Groupe 5">Groupe 5</option>
+            <option value="Groupe 6">Groupe 6</option>
+          </select>
+          <div class="field-hint">Sélectionner le groupe de la classe</div>
+        </div>
+
+        <div class="field-group">
+          <label for="sessSelectEnseignant"><span class="fi">👤</span> Enseignant(e)</label>
+          <select id="sessSelectEnseignant" onchange="changerEnseignant()" title="Sélectionner l'enseignant(e)">
+            <option value="">— Sélectionner —</option>
+            <option value="Meryem Sabeq">Meryem Sabeq</option>
+            <option value="Aya Es-Sebyty">Aya Es-Sebyty</option>
+            <option value="Latefa Oudbir">Latefa Oudbir</option>
+            <option value="Imad Jeddi">Imad Jeddi</option>
+            <option value="__autre__">Autres…</option>
+          </select>
+          <div id="sessAutreWrap">
+            <input type="text" id="sessEnseignant" placeholder="Nom et prénom" oninput="sauvegarderDonnees(true)" style="margin-top:6px">
+          </div>
+        </div>
+
+        <div class="field-group fg-span3">
+          <label for="sessDate"><span class="fi">📅</span> Date du diagnostic</label>
+          <input type="date" id="sessDate" oninput="sauvegarderDonnees(true)">
+          <div class="field-hint">Date à laquelle le diagnostic est réalisé</div>
+        </div>
+
+        <input type="hidden" id="sessClasse" value="">
+      </div>
+    </div>
+
+    <!-- 📘 Orientations pédagogiques — toujours visible ; se remplit automatiquement selon le niveau sélectionné -->
+    <div class="card home-info-card orientation-card" id="carteOrientation">
+      <div class="card-title"><span class="ci-icon oi-icon">📘</span> Orientations pédagogiques</div>
+      <div class="orientation-niveau" id="orNiveauLabel">Sélectionnez un niveau scolaire ci-dessus</div>
+      <p class="orientation-objectif" id="orObjectif">Les orientations pédagogiques officielles (objectif du niveau + composition attendue de l'enchaînement) s'afficheront automatiquement ici dès que vous choisirez 1AC, 2AC ou 3AC.</p>
+      <div class="orientation-compo" id="orientationCompoWrap" style="display:none">
+        <div class="compo-item compo-a">
+          <span class="compo-val" id="orCompoA">0</span>
+          <span class="compo-label">Élément(s) A</span>
+        </div>
+        <div class="compo-item compo-b">
+          <span class="compo-val" id="orCompoB">0</span>
+          <span class="compo-label">Élément(s) B</span>
+        </div>
+        <div class="compo-item compo-c">
+          <span class="compo-val" id="orCompoC">0</span>
+          <span class="compo-label">Élément(s) C</span>
+        </div>
+      </div>
+      <div class="orientation-footnote" id="orientationFootnote" style="display:none">Composition officielle de l'enchaînement attendue pour ce niveau — appliquée automatiquement aux axes prioritaires et à la planification.</div>
+    </div>
+
+    <div class="home-cta">
+      <button class="btn btn-rose btn-hero" onclick="demarrerDiagnostic()">
+        <span>▶️ Commencer le diagnostic</span>
+        <span class="cta-sub">Accéder à l'étape de saisie des élèves</span>
+      </button>
+    </div>
+    <div class="home-trust">
+      <span>ℹ️ Vos informations seront automatiquement sauvegardées avec votre session</span>
+      <span>🔒 Données sécurisées</span>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ ÉTAPE 1 -->
+<div class="section" id="sec1">
+
+  <div class="card">
+    <div class="card-title">📥 Import CSV terrain <span class="badge">ADP 2026</span></div>
+    <label class="upload-zone" id="dropZone">
+      <input type="file" id="csvFile" accept=".csv,.txt">
+      <div>📂 Cliquer pour importer un fichier CSV terrain</div>
+      <div style="font-size:.7rem;margin-top:4px;opacity:.7">Format ADP 2026 — colonnes OBS01_xxx ou _Degre ou numériques · Degrés : D0/D1/D2/D3</div>
+    </label>
+    <div id="importInfo" class="import-info"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">✏️ Saisie manuelle — 30 élèves
+      <span style="font-size:.7rem;font-weight:400;color:#888">Degrés D0/D1/D2/D3 par observable</span>
+      <span id="compteurEleves">0 / 30 élèves</span>
+    </div>
+
+    <div class="tbl-wrap">
+      <!-- ══ EN-TÊTE MULTI-NIVEAUX (Exécution / Roulement / Renversement / Attitude) ══ -->
+      <div class="header-multi-wrap">
+
+        <!-- col 1 : Prénom (rowspan 3) -->
+        <div class="hmw-prenom">Prénom *</div>
+
+        <!-- col 2 : Org/Esp (rowspan 3) -->
+        <div class="hmw-orgesp">Org/<br>Esp</div>
+
+        <!-- L1 cols 3-7 : EXÉCUTION -->
+        <div class="hmw-execution">Exécution</div>
+
+        <!-- cols 8-11 : Diff / Comp (rowspan 3) -->
+        <div class="hmw-diff-a">Diff.A</div>
+        <div class="hmw-diff-b">Diff.B</div>
+        <div class="hmw-diff-c">Diff.C</div>
+        <div class="hmw-comp">Obser-<br>vation</div>
+
+        <!-- L2 cols 3-4 : Roulement -->
+        <div class="hmw-roulement">Roulement</div>
+
+        <!-- L2 cols 5-6 : Renversement -->
+        <div class="hmw-renversement">Renversement</div>
+
+        <!-- L2-L3 col 7 : Attitude (rowspan 2) -->
+        <div class="hmw-attitude">Attitude</div>
+
+        <!-- L3 labels individuels -->
+        <div class="hmw-rav">R.AV</div>
+        <div class="hmw-rar">R.AR</div>
+        <div class="hmw-rvs">RV.S</div>
+        <div class="hmw-rvd">RV.D</div>
+
+      </div>
+      <div id="studentRows"></div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="analyser()">🔍 Analyser la classe</button>
+      <button class="btn btn-outline btn-sm" onclick="effacer()">✕ Effacer</button>
+      <button class="btn btn-outline btn-sm no-print" onclick="window.print()">🖨 Imprimer</button>
+      <button class="btn btn-vert btn-sm no-print" onclick="sauvegarderDonnees(false)">💾 Sauvegarder</button>
+      <button class="btn btn-outline btn-sm no-print" onclick="chargerDonnees(false)">📂 Charger</button>
+      <button class="btn btn-json btn-sm no-print" onclick="exporterJSON()">⬇ Export JSON</button>
+      <label class="btn btn-outline btn-sm no-print" style="cursor:pointer;margin:0">
+        📤 Import JSON<input type="file" accept=".json" style="display:none" onchange="importerJSON(event)">
+      </label>
+      <button class="btn btn-terrain btn-sm no-print" onclick="telechargerFicheTerrain()">📄 Fiche terrain</button>
+      <button class="btn btn-save-html btn-sm no-print" onclick="enregistrerFicheHTML()">💾 Enregistrer la fiche</button>
+      <button class="btn btn-pdf btn-sm no-print" onclick="imprimerFichePDF()">📑 Enregistrer en PDF</button>
+      <button class="btn btn-ia btn-sm no-print" onclick="ouvrirModaleIA()">🤖 Guide IA</button>
+      <span style="font-size:.7rem;color:#888;margin-left:auto">
+        <strong>Légende :</strong>
+        D0 = Faible &nbsp;·&nbsp; D1 = Moyen &nbsp;·&nbsp; D2 = Bon &nbsp;·&nbsp; D3 = Parfait
+      </span>
+    </div>
+  </div>
+
+  <div id="resultatEtape1" style="display:none">
+
+    <div id="decisionBanner"></div>
+
+    <div class="stat-row" id="statRow"></div>
+
+    <div class="card">
+      <div class="card-title">📊 Analyse par observable</div>
+      <div id="obsAnalyse"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">👥 Groupes de besoin</div>
+      <div id="groupesBesoin"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📋 Tableau individuel détaillé</div>
+      <div class="tbl-wrap">
+        <table id="tableauIndividuel">
+          <thead>
+            <tr>
+              <th>Rang</th><th>Prénom</th>
+              <th>Org/Esp</th><th>R.AV</th><th>R.AR</th><th>RV.S</th><th>RV.D</th><th>Attit.</th><th>Diff.A</th><th>Diff.B</th><th>Diff.C</th><th>Observation</th>
+              <th>Moy/10</th><th>/20</th>
+              <th>Profil</th><th>Profil détaillé</th>
+              <th>Lacune dominante</th><th>Axe prioritaire</th><th>SA recommandée</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyIndiv"></tbody>
+        </table>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-vert btn-sm" onclick="exportCSV()">⬇ Export CSV</button>
+      </div>
+    </div>
+
+    <div class="card" id="carteElementsRecommandes">
+      <div class="card-title">📋 Éléments gymniques recommandés</div>
+      <div id="elementsRecoIntro"></div>
+      <div id="elementsRecoContainer"></div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-or" onclick="allerEtape2()">Passer à l'étape 2 — Axes prioritaires →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ ÉTAPE 2 -->
+<div class="section" id="sec2">
+
+  <div class="card">
+    <div class="card-title">🎯 Sélection des axes prioritaires
+      <span style="font-size:.7rem;font-weight:400;color:#888;margin-left:auto">Choisir 3 ou 4 axes</span>
+    </div>
+    <p style="font-size:.78rem;color:#555;margin-bottom:12px">
+      Les axes ci-dessous sont extraits du référentiel didactique DI-GYM (conduites motrices, objectifs, SA).
+      Sélectionnez 3 ou 4 axes. La planification sera générée uniquement sur les axes validés.
+    </p>
+    <div class="orientation-mini" id="orientationMiniEtape2"></div>
+    <div id="axesContainer"></div>
+    <div id="axeMsg" style="font-size:.75rem;color:var(--rouge);min-height:18px;margin-top:4px"></div>
+    <div class="btn-row">
+      <button class="btn btn-outline btn-sm" onclick="allerEtape1()">← Retour étape 1</button>
+      <button class="btn btn-or" id="btnEtape3" onclick="allerEtape3()" disabled>Paramétrer le cycle — Étape 3 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ ÉTAPE 3 -->
+<div class="section" id="sec3">
+
+  <div class="card">
+    <div class="card-title">⚙️ Paramétrage du cycle</div>
+    <p style="font-size:.78rem;color:#555;margin-bottom:14px">
+      Axes sélectionnés : <span id="axesSelLabel" style="font-weight:700;color:var(--bleu)"></span>
+    </p>
+
+    <div class="slider-wrap">
+      <div class="slider-label">Nombre de séances : <span id="sliderVal" style="color:var(--or)">8</span></div>
+      <input type="range" id="sliderSeances" min="6" max="10" value="8" oninput="updateSlider()">
+      <div style="display:flex;justify-content:space-between;font-size:.65rem;color:#888;margin-top:2px">
+        <span>6</span><span>7</span><span>8</span><span>9</span><span>10</span>
+      </div>
+    </div>
+
+    <div class="slider-preview" id="sliderPreview"></div>
+
+    <div id="elementsRefEtape3"></div>
+
+    <div class="btn-row">
+      <button class="btn btn-outline btn-sm" onclick="allerEtape2()">← Retour étape 2</button>
+      <button class="btn btn-primary" onclick="allerEtape4()">Générer la planification — Étape 4 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ ÉTAPE 4 -->
+<div class="section" id="sec4">
+
+  <div class="card no-print" style="padding:10px 16px">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <button class="btn btn-outline btn-sm" onclick="allerEtape3()">← Retour étape 3</button>
+      <button class="btn btn-vert btn-sm" onclick="window.print()">🖨 Imprimer</button>
+      <button class="btn btn-json btn-sm" onclick="exporterPlanifCSV()">⬇ Export planification CSV</button>
+      <span style="font-size:.72rem;color:#888;margin-left:auto">La décision finale reste à l'enseignant(e)</span>
+    </div>
+  </div>
+
+  <div id="planifContainer"></div>
+
+  <div id="resumeCycle"></div>
+</div>
+
+</main>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────
+// RÉFÉRENTIEL — extrait des fichiers joints (ne pas modifier)
+// ─────────────────────────────────────────────────────────────────────
+
+const OBS_NOMS = [
+  "Organisation/Espace",
+  "Roulement AV",
+  "Roulement AR",
+  "Renversement Statique",
+  "Renversement Dynamique",
+  "Attitude",
+  "Difficulté A",
+  "Difficulté B",
+  "Difficulté C",
+  "Observation"
+];
+
+// Mapping degré → score /10
+const DEG_SCORE = { D0: 2.5, D1: 5, D2: 7.5, D3: 10 };
+
+// Seuils profil global
+const SEUIL_C = 7.5;
+const SEUIL_B = 4.5;
+
+// Axes prioritaires (extraits du référentiel DI-GYM)
+const AXES_REF = [
+  {
+    id: "AX1",
+    obs: 0,
+    titre: "Alignement segmentaire et gainage postural (ceinture scapulaire/abdominale)",
+    objectif: "Stabiliser les postures et automatiser le gainage lors des renversements et liaisons",
+    code: "EX- / EX+",
+    sa: "SA-A1 — Situations de gainage et postures simples (planche, chandelle accompagnée)",
+    conduite: "l\u2019\u00e9l\u00e8ve maintient une position de gainage pendant au moins 5 secondes en planche ventrale lors d\u2019une situation d\u2019\u00e9quilibre"
+  },
+  {
+    id: "AX2",
+    obs: 1,
+    titre: "Ma\u00eetrise technique du roulement (placement nuque, groupement, pouss\u00e9e sym\u00e9trique)",
+    objectif: "Conqu\u00e9rir un roulement avant/arri\u00e8re rectiligne et dynamique avec relance axiale",
+    code: "RO- / RO+",
+    sa: "SA-B1 — Roulement group\u00e9 avec relance (tremplin mousse, rep\u00e8re nuque)",
+    conduite: "l\u2019\u00e9l\u00e8ve r\u00e9alise un roulement avant sans d\u00e9viation de plus de 20 cm par rapport \u00e0 l\u2019axe de d\u00e9part"
+  },
+  {
+    id: "AX3",
+    obs: 0,
+    titre: "Organisation et exploitation de l\u2019espace du praticable (orientation, liaisons, d\u00e9placements)",
+    objectif: "Passer d\u2019une zone r\u00e9duite \u00e0 une occupation \u00e9quilibr\u00e9e de tout l\u2019espace",
+    code: "OE- / OE+",
+    sa: "SA-A2 — Parcours balit\u00e9 avec rep\u00e8res au sol (ruban adh\u00e9sif / plots)",
+    conduite: "l\u2019\u00e9l\u00e8ve utilise au moins deux zones distinctes du praticable dans son encha\u00eenement sans temps d\u2019arr\u00eat"
+  },
+  {
+    id: "AX4",
+    obs: 3,
+    titre: "Gestion de la difficult\u00e9 — acceptation du risque contr\u00f4l\u00e9 (renversements)",
+    objectif: "R\u00e9duire l\u2019appr\u00e9hension et engager les \u00e9l\u00e8ments difficiles avec s\u00e9curit\u00e9 active",
+    code: "DI- / DI+",
+    sa: "SA-B2 — Station renvers\u00e9e contre un mur (parade active pareur)",
+    conduite: "l\u2019\u00e9l\u00e8ve tente le renversement statique avec parade au moins 3 fois cons\u00e9cutives sans refus"
+  },
+  {
+    id: "AX5",
+    obs: 5,
+    titre: "Coh\u00e9rence et logique de l\u2019encha\u00eenement (fluidit\u00e9, transitions, m\u00e9morisation)",
+    objectif: "Construire un encha\u00eenement de 6 \u00e0 8 \u00e9l\u00e9ments sans temps d\u2019arr\u00eat entre les transitions",
+    code: "PR- / PR+",
+    sa: "SA-B3 — Carte d\u2019encha\u00eenement personnalis\u00e9e (ordre fix\u00e9 par l\u2019\u00e9l\u00e8ve)",
+    conduite: "l\u2019\u00e9l\u00e8ve r\u00e9alise un encha\u00eenement de 5 \u00e9l\u00e9ments sans pause sup\u00e9rieure \u00e0 2 secondes entre deux \u00e9l\u00e9ments"
+  },
+  {
+    id: "AX6",
+    obs: 2,
+    titre: "Pr\u00e9servation rachidienne — coordination ceintures scapulaire et pelvienne",
+    objectif: "Ma\u00eetriser l\u2019alignement tronc-bras lors des phases d\u2019inversion (N2-3)",
+    code: "EX+ / N2-3",
+    sa: "SA-C1 — Encha\u00eenement vari\u00e9 tout espace avec \u00e9l\u00e9ment de renversement ma\u00eetris\u00e9",
+    conduite: "l\u2019\u00e9l\u00e8ve r\u00e9alise un renversement dynamique avec alignement tronc-bras observable d\u00e8s la phase d\u2019appel"
+  },
+  {
+    id: "AX7",
+    obs: 9,
+    titre: "Construction et fluidit\u00e9 de l\u2019encha\u00eenement",
+    objectif: "Construire un encha\u00eenement coh\u00e9rent, continu et fluide comprenant des liaisons ma\u00eetris\u00e9es entre les \u00e9l\u00e9ments gymniques",
+    code: "CE- / CE+",
+    sa: "SA-C2 — Construction progressive d\u2019un encha\u00eenement personnel avec contraintes de continuit\u00e9 et d\u2019occupation de l\u2019espace",
+    conduite: "l\u2019\u00e9l\u00e8ve r\u00e9alise un encha\u00eenement continu de 6 \u00e0 8 \u00e9l\u00e9ments avec moins de 2 secondes d\u2019arr\u00eat entre deux \u00e9l\u00e9ments"
+  }
+];
+
+// ─────────────────────────────────────────────────────────────────────
+// MOTEUR DES ORIENTATIONS PÉDAGOGIQUES — Cycle collégial (1AC / 2AC / 3AC)
+// Source : Orientations Pédagogiques officielles EPS — Gymnastique au sol.
+// Ce module centralise, par niveau, l'objectif pédagogique officiel et la
+// composition attendue de l'enchaînement (nb d'éléments A/B/C). Il pilote
+// automatiquement la carte "📘 Orientations pédagogiques" ainsi que les
+// recommandations affichées aux étapes ② (Axes prioritaires) et ④ (Planification).
+// ─────────────────────────────────────────────────────────────────────
+const ORIENTATIONS_PEDAGOGIQUES = {
+  "1AC": {
+    label: "1AC — 1\u1D49\u02B3\u1D49 année collégiale",
+    objectif: "L\u2019élève doit pouvoir se confirmer et s\u2019adapter à des mouvements inhabituels afin de réaliser un enchaînement simple d\u2019éléments gymniques devant le groupe classe.",
+    composition: { A: 3, B: 2, C: 0 },
+    // Axes du référentiel DI-GYM à privilégier en priorité pour ce niveau
+    axesPrioritairesIds: ["AX1", "AX2", "AX3"]
+  },
+  "2AC": {
+    label: "2AC — 2\u1D49 année collégiale",
+    objectif: "L\u2019élève doit pouvoir maîtriser, organiser son corps et prendre le risque pour présenter un enchaînement gymnique varié en éléments et en rythme devant le groupe classe.",
+    composition: { A: 3, B: 2, C: 1 },
+    axesPrioritairesIds: ["AX4", "AX5", "AX6"]
+  },
+  "3AC": {
+    label: "3AC — 3\u1D49 année collégiale",
+    objectif: "L\u2019élève doit pouvoir concevoir et réaliser un projet individuel sous forme d\u2019un enchaînement d\u2019éléments gymniques devant le groupe classe, en respectant les exigences organisationnelles, techniques et réglementaires.",
+    composition: { A: 2, B: 4, C: 1 },
+    axesPrioritairesIds: ["AX5", "AX6", "AX7"]
+  }
+};
+
+/** Retourne l'orientation pédagogique officielle d'un niveau (ou null si niveau inconnu/vide). */
+function getOrientation(niveau) {
+  return ORIENTATIONS_PEDAGOGIQUES[niveau] || null;
+}
+
+/** Applique l'orientation pédagogique du niveau sélectionné : met à jour l'état global
+ *  et rafraîchit toutes les cartes/bandeaux qui en dépendent dans l'application. */
+function appliquerOrientation(niveau) {
+  orientationActive = getOrientation(niveau);
+  _majCarteOrientation();
+  return orientationActive;
+}
+
+/** Rafraîchit la carte "📘 Orientations pédagogiques" de la page Configuration.
+ *  La carte reste toujours visible : elle affiche une invite tant qu'aucun niveau
+ *  n'est choisi, puis se remplit automatiquement dès la sélection. */
+function _majCarteOrientation() {
+  const carte = document.getElementById("carteOrientation");
+  if (!carte) return;
+  const elNiveau = document.getElementById("orNiveauLabel");
+  const elObj    = document.getElementById("orObjectif");
+  const elA      = document.getElementById("orCompoA");
+  const elB      = document.getElementById("orCompoB");
+  const elC      = document.getElementById("orCompoC");
+  const compoWrap = document.getElementById("orientationCompoWrap");
+  const footnote   = document.getElementById("orientationFootnote");
+
+  if (!orientationActive) {
+    if (elNiveau) elNiveau.textContent = "Sélectionnez un niveau scolaire ci-dessus";
+    if (elObj)    elObj.textContent    = "Les orientations pédagogiques officielles (objectif du niveau + composition attendue de l'enchaînement) s'afficheront automatiquement ici dès que vous choisirez 1AC, 2AC ou 3AC.";
+    if (compoWrap) compoWrap.style.display = "none";
+    if (footnote)  footnote.style.display  = "none";
+    return;
+  }
+  if (elNiveau) elNiveau.textContent = orientationActive.label;
+  if (elObj)    elObj.textContent    = orientationActive.objectif;
+  if (elA)      elA.textContent      = orientationActive.composition.A;
+  if (elB)      elB.textContent      = orientationActive.composition.B;
+  if (elC)      elC.textContent      = orientationActive.composition.C;
+  if (compoWrap) compoWrap.style.display = "flex";
+  if (footnote)  footnote.style.display  = "block";
+}
+
+/** Génère le libellé compact "composition attendue" (ex. "3 A · 2 B · 0 C"). */
+function _libelleComposition(orientation) {
+  if (!orientation) return "";
+  const c = orientation.composition;
+  return `${c.A} élément(s) A · ${c.B} élément(s) B · ${c.C} élément(s) C`;
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// BANQUE D'ÉLÉMENTS GYMNIQUES — Tableau des difficultés par famille
+// Transcription du référentiel officiel (pages 12 à 15/15, ADP 2026).
+// Chaque élément est classé par famille, sous-catégorie (le cas échéant)
+// et niveau de difficulté A (facile) à E (très difficile).
+// ⚠ Transcription à partir d'un document scanné : à vérifier/ajuster par
+// l'enseignant si un intitulé diffère du référentiel papier.
+// ─────────────────────────────────────────────────────────────────────
+const BANQUE_ELEMENTS = [
+  {
+    nom: "Roulements",
+    description: "Roulade avant/arrière/latérale : de larges surfaces du corps sont en contact progressif avec le sol.",
+    elements: [
+      { sc: "Avant", d: "A", n: "Groupé" },
+      { sc: "Avant", d: "B", n: "Jambes écartées tendues" },
+      { sc: "Avant", d: "C", n: "Jambes serrées tendues" },
+      { sc: "Avant", d: "D", n: "Élevé, corps carpé" },
+      { sc: "Avant", d: "E", n: "Élevé, corps tendu" },
+      { sc: "Arrière", d: "A", n: "Groupé" },
+      { sc: "Arrière", d: "B", n: "À l'appui semi-renversé, jambes serrées tendues" },
+      { sc: "Arrière", d: "C", n: "À l'appui, proche de l'ATR" },
+      { sc: "Arrière", d: "D", n: "À l'appui, passant par l'ATR" },
+      { sc: "Latéral (départ/retour à genoux)", d: "A", n: "Groupé" },
+      { sc: "Latéral (départ/retour à genoux)", d: "B", n: "Jambes écartées tendues" },
+      { sc: "Latéral (départ/retour à genoux)", d: "C", n: "Jambes écartées tendues et ½ tour" }
+    ]
+  },
+  {
+    nom: "Renversements",
+    description: "Roue, saut de mains, etc. : passage de l'appui podal à l'appui manuel ou céphalique et retour à l'appui podal.",
+    elements: [
+      { sc: "Simple", d: "A", n: "Poirier — élévation jambes pliées" },
+      { sc: "Simple", d: "A", n: "Chandelle" },
+      { sc: "Simple", d: "A", n: "Placement du dos, jambes pliées" },
+      { sc: "Simple", d: "B", n: "Placement du dos, jambes tendues" },
+      { sc: "Simple", d: "B", n: "ATR à la station debout" },
+      { sc: "Simple", d: "C", n: "Poirier — élévation jambes tendues" },
+      { sc: "Simple", d: "D", n: "ATR ¼ de valse" },
+      { sc: "Simple", d: "E", n: "Du poirier à l'ATR, jambes pliées" },
+      { sc: "Simple", d: "E", n: "ATR ½ de valse" },
+      { sc: "Simple", d: "E", n: "Du poirier à l'ATR, jambes tendues" },
+      { sc: "Simple", d: "E", n: "ATR valse complète (1/1 tour)" },
+      { sc: "Avant", d: "B", n: "ATR pont" },
+      { sc: "Avant", d: "C", n: "Souplesse avant" },
+      { sc: "Avant", d: "D", n: "Saut de mains" },
+      { sc: "Avant", d: "D", n: "Saut de tête" },
+      { sc: "Avant", d: "D", n: "Saut de nuque" },
+      { sc: "Avant", d: "E", n: "Flic avant" },
+      { sc: "Arrière", d: "A", n: "Pont arrière, départ debout" },
+      { sc: "Arrière", d: "C", n: "Pont arrière à la station debout" },
+      { sc: "Arrière", d: "D", n: "Souplesse arrière, 1 jambe" },
+      { sc: "Arrière", d: "E", n: "Flic flac (avec ou sans tapis de chute)" }
+    ]
+  },
+  {
+    nom: "Rotations",
+    description: "Salto avant/arrière/latéral, pirouette, etc. Rotation sans appui intermédiaire, entre deux appuis podaux. Les saltos ne doivent être réalisés qu'en présence de conditions de sécurité appropriées (parade, tremplin, tapis de chute).",
+    elements: [
+      { sc: "Latéral", d: "C", n: "Roue" },
+      { sc: "Latéral", d: "D", n: "Roue d'une main" },
+      { sc: "Latéral", d: "D", n: "Rondade extension" },
+      { sc: "Latéral", d: "E", n: "Roue arabe" },
+      { sc: "Latéral", d: "E", n: "Roue sautée" },
+      { sc: "Latéral", d: "E", n: "Roue sans mains avec tremplin" },
+      { sc: "Latéral", d: "E", n: "Roue sans mains" },
+      { sc: "Avant", d: "D", n: "Salto avant avec tremplin et tapis de chute" },
+      { sc: "Avant", d: "E", n: "Salto avant avec tapis de chute" },
+      { sc: "Avant", d: "E", n: "Salto avant" },
+      { sc: "Arrière", d: "D", n: "Salto arrière avec tremplin, tapis de chute et aide" },
+      { sc: "Arrière", d: "E", n: "Salto arrière avec tremplin et tapis de chute" },
+      { sc: "Arrière", d: "E", n: "Salto arrière avec ou sans tremplin, avec parade" },
+      { sc: "Longitudinale", d: "B", n: "½ pirouette" },
+      { sc: "Longitudinale", d: "C", n: "Course + ½ pirouette" },
+      { sc: "Longitudinale", d: "D", n: "Pirouette (1 tour)" },
+      { sc: "Longitudinale", d: "E", n: "Course + 1,5 pirouette" }
+    ]
+  },
+  {
+    nom: "Attitudes (maintien 2\")",
+    description: "Planche faciale, équilibre fessier, équerre, etc. Appuis divers maintenus deux secondes.",
+    elements: [
+      { sc: "Appui podal", d: "A", n: "Planche écrasée" },
+      { sc: "Appui podal", d: "B", n: "Planche, jambe horizontale" },
+      { sc: "Appui podal", d: "C", n: "Planche latérale" },
+      { sc: "Appui podal", d: "D", n: "Planche, jambe > 45°" },
+      { sc: "Appui podal", d: "E", n: "Y (planche jambe élevée)" },
+      { sc: "Appui manuel", d: "A", n: "Équerre jambes jointes" },
+      { sc: "Appui manuel", d: "B", n: "Équerre jambes écartées (bras entre les jambes)" },
+      { sc: "Appui manuel", d: "D", n: "Équerre renversée jambes écartées" },
+      { sc: "Appui manuel", d: "E", n: "ATR tenue 2 secondes" },
+      { sc: "Appuis quadrupédiques", d: "B", n: "Appui ventral à l'appui facial" },
+      { sc: "Appuis quadrupédiques", d: "C", n: "Appui facial et ½ tour à l'appui dorsal" },
+      { sc: "Appuis quadrupédiques", d: "D", n: "Appui ventral, répulsion ½ tour à l'appui dorsal" },
+      { sc: "Appuis quadrupédiques", d: "E", n: "Appui ventral, répulsion 1 tour complet" },
+      { sc: "Appuis quadrupédiques", d: "E", n: "Debout, chute faciale et répulsion 1 tour à l'appui facial" },
+      { sc: "Autres formes", d: "B", n: "Équilibre fessier, jambes pliées" },
+      { sc: "Autres formes", d: "C", n: "Équilibre fessier, jambes tendues" },
+      { sc: "Autres formes", d: "E", n: "Appui mains et 1 pied, jambe libre à la verticale" }
+    ]
+  },
+  {
+    nom: "Mouvements de force",
+    description: "ATR en force, etc. Passages de l'appui quadrupédique à l'ATR ou au poirier, réalisés lentement et en force.",
+    elements: [
+      { sc: "", d: "C", n: "Monter au poirier lentement, jambes pliées" },
+      { sc: "", d: "D", n: "Monter au poirier lentement, jambes tendues" },
+      { sc: "", d: "D", n: "Monter à l'ATR lentement, bras pliés" },
+      { sc: "", d: "E", n: "Monter à l'ATR lentement, bras pliés et jambes tendues" },
+      { sc: "", d: "E", n: "Monter à l'ATR lentement, bras et jambes tendus" }
+    ]
+  },
+  {
+    nom: "Mouvements de souplesse",
+    description: "Écrasement facial, grand écart, etc. Mouvements démontrant la flexibilité articulaire maximale, sollicitant notamment les ceintures scapulaire et pelvienne.",
+    elements: [
+      { sc: "Ceinture scapulaire", d: "C", n: "Pont" },
+      { sc: "Ceinture scapulaire", d: "D", n: "Pont sur une jambe" },
+      { sc: "Ceinture scapulaire", d: "E", n: "Pont sur une jambe, l'autre à la verticale" },
+      { sc: "Ceinture pelvienne", d: "B", n: "Fermeture jambes-tronc partielle" },
+      { sc: "Ceinture pelvienne", d: "C", n: "Fermeture jambes-tronc totale" },
+      { sc: "Ceinture pelvienne", d: "D", n: "Écrasement facial" },
+      { sc: "Ceinture pelvienne", d: "D", n: "Grand écart costal" },
+      { sc: "Ceinture pelvienne", d: "E", n: "Grand écart facial" }
+    ]
+  },
+  {
+    nom: "Chorégraphie",
+    description: "Rubrique très variée incluant les mouvements de danse et de liaison (pas, mouvements de bras, etc.).",
+    elements: [
+      { sc: "Pas", d: "A", n: "Pas simples" },
+      { sc: "Pas", d: "B", n: "Pas avec mouvements de bras" },
+      { sc: "Pas", d: "D", n: "Pas et mouvements de bras complexes" }
+    ]
+  },
+  {
+    nom: "Sauts",
+    description: "Sauts de danse ou de liaison (pas, sauts, pivots, ondes du corps, passages au sol, etc.).",
+    elements: [
+      { sc: "", d: "A", n: "Saut groupé" },
+      { sc: "", d: "B", n: "Saut carpé jambes écartées" },
+      { sc: "", d: "B", n: "Saut de chat" },
+      { sc: "", d: "B", n: "Saut de biche" },
+      { sc: "", d: "C", n: "Saut groupé ½ tour" },
+      { sc: "", d: "D", n: "Saut carpé jambes serrées" },
+      { sc: "", d: "D", n: "Saut enjambé grande amplitude" },
+      { sc: "", d: "D", n: "Saut de biche grande amplitude, tournant" },
+      { sc: "", d: "E", n: "Saut carpé jambes serrées ½ tour" },
+      { sc: "", d: "E", n: "Saut enjambé très grande amplitude" },
+      { sc: "", d: "E", n: "Saut avec changement de jambes" }
+    ]
+  },
+  {
+    nom: "Pivots",
+    description: "Rotations autour de l'axe longitudinal, jambe libre pliée ou tendue.",
+    elements: [
+      { sc: "", d: "A", n: "½ tour, jambe libre pliée" },
+      { sc: "", d: "B", n: "½ tour, jambe libre tendue" },
+      { sc: "", d: "C", n: "Tour complet, jambe libre pliée" },
+      { sc: "", d: "D", n: "Tour complet, jambe libre tendue" },
+      { sc: "", d: "E", n: "1 tour ½" }
+    ]
+  },
+  {
+    nom: "Autres mouvements",
+    description: "Onde du corps et mouvements giratoires (cercles d'une jambe ou des deux jambes).",
+    elements: [
+      { sc: "Onde du corps", d: "A", n: "Statique" },
+      { sc: "Onde du corps", d: "C", n: "En déplacement" },
+      { sc: "Onde du corps", d: "D", n: "Statique avec ½ tour" },
+      { sc: "Onde du corps", d: "E", n: "En déplacement et ½ tour, combiné avec action des bras" },
+      { sc: "Mouvements giratoires", d: "B", n: "1 cercle d'une jambe" },
+      { sc: "Mouvements giratoires", d: "C", n: "2 cercles d'une jambe" },
+      { sc: "Mouvements giratoires", d: "E", n: "3 cercles d'une jambe" },
+      { sc: "Mouvements giratoires", d: "E", n: "1 cercle des deux jambes" }
+    ]
+  }
+];
+
+let elementsActifs = {}; // clé "el_<famille>_<index>" → booléen (activé/désactivé par l'enseignant), persistée
+
+/** Construit une clé stable pour un élément de la banque. */
+function _idElement(fi, ei) { return `el_${fi}_${ei}`; }
+
+/** Détermine le niveau global de la classe (débutant/intermédiaire/avancé) à partir des profils élèves. */
+function niveauClasseGlobal() {
+  if (!eleves || eleves.length === 0) return null;
+  const nbA = eleves.filter(e => e.profil === "A").length;
+  const nbB = eleves.filter(e => e.profil === "B").length;
+  const nbC = eleves.filter(e => e.profil === "C").length;
+  if (nbA >= nbB && nbA >= nbC) return "debutant";
+  if (nbC > nbA && nbC > nbB) return "avance";
+  return "intermediaire";
+}
+
+/** Retourne les niveaux de difficulté à privilégier (principales) et en consolidation, selon le niveau de classe. */
+function _difficultesPourNiveau(niveauClasse) {
+  const map = {
+    debutant:      { principales: ["A", "B"], consolidation: [] },
+    intermediaire: { principales: ["B", "C"], consolidation: ["A"] },
+    avance:        { principales: ["C", "D"], consolidation: ["E"] }
+  };
+  return map[niveauClasse] || { principales: [], consolidation: [] };
+}
+
+/** Génère/rafraîchit la section "📋 Éléments gymniques recommandés" (étape ① après analyse). */
+function genererElementsRecommandes() {
+  const cont  = document.getElementById("elementsRecoContainer");
+  const intro = document.getElementById("elementsRecoIntro");
+  if (!cont || !intro) return;
+
+  const niveauClasse = niveauClasseGlobal();
+  if (!niveauClasse) {
+    intro.innerHTML = `<p style="font-size:.8rem;color:var(--texte-s)">Réalisez d'abord l'analyse de la classe (🔍 Analyser la classe) pour obtenir automatiquement une sélection d'éléments gymniques adaptée au profil réel des élèves.</p>`;
+    cont.innerHTML = "";
+    return;
+  }
+
+  const { principales, consolidation } = _difficultesPourNiveau(niveauClasse);
+  const labelNiveau = { debutant: "🔴 Débutant", intermediaire: "🟡 Intermédiaire", avance: "🟢 Avancé" }[niveauClasse];
+
+  intro.innerHTML = `<div class="reco-banner">
+      📋 Niveau global de la classe détecté : <strong>${labelNiveau}</strong> —
+      éléments recommandés en priorité : <strong>${principales.join(" et ")}</strong>${consolidation.length ? ` (avec <strong>${consolidation.join("/")}</strong> en consolidation)` : ""}.
+      <br>Décochez/cochez librement les éléments ci-dessous : votre sélection sert de base à la construction des séances.
+    </div>`;
+
+  cont.innerHTML = "";
+  BANQUE_ELEMENTS.forEach((fam, fi) => {
+    const nbReco = fam.elements.filter(el => principales.includes(el.d) || consolidation.includes(el.d)).length;
+    const det = document.createElement("details");
+    det.className = "famille-elements";
+    if (nbReco > 0) det.open = false;
+    const summary = document.createElement("summary");
+    summary.innerHTML = `${fam.nom} <span class="fam-count">${fam.elements.length} éléments · ${nbReco} recommandé(s)</span>`;
+    det.appendChild(summary);
+    if (fam.description) {
+      const desc = document.createElement("div");
+      desc.className = "fam-desc";
+      desc.textContent = fam.description;
+      det.appendChild(desc);
+    }
+    const grid = document.createElement("div");
+    grid.className = "fam-elements-grid";
+    fam.elements.forEach((el, ei) => {
+      const id = _idElement(fi, ei);
+      const estPrincipal = principales.includes(el.d);
+      const estConso = consolidation.includes(el.d);
+      const estReco = estPrincipal || estConso;
+      if (!(id in elementsActifs)) elementsActifs[id] = estReco; // valeur par défaut — ne pas écraser un choix déjà fait par l'enseignant
+      const actif = !!elementsActifs[id];
+      const chip = document.createElement("label");
+      chip.className = "el-chip diff-" + el.d + (actif ? " actif" : "") + (estReco ? " reco" : "");
+      chip.innerHTML = `<input type="checkbox" ${actif ? "checked" : ""} onchange="toggleElement('${id}', this)">
+        <span class="el-diff">${el.d}</span>
+        <span class="el-nom">${el.sc ? "<em>" + el.sc + "</em> — " : ""}${el.n}</span>
+        ${estPrincipal ? '<span class="el-badge">🎯 Recommandé</span>' : estConso ? '<span class="el-badge el-badge-conso">➕ Consolidation</span>' : ""}`;
+      grid.appendChild(chip);
+    });
+    det.appendChild(grid);
+    cont.appendChild(det);
+  });
+}
+
+/** Active/désactive un élément de la banque et persiste le choix de l'enseignant. */
+function toggleElement(id, input) {
+  elementsActifs[id] = input.checked;
+  const chip = input.closest(".el-chip");
+  if (chip) chip.classList.toggle("actif", input.checked);
+  sauvegarderDonnees(true);
+}
+
+
+const SA_PAR_PROFIL = {
+  A: "SA-A1 — Gainage et postures simples",
+  B: "SA-B1 — Roulement group\u00e9 avec relance",
+  C: "SA-C1 — Encha\u00eenement vari\u00e9 tout espace"
+};
+
+// Axe personnalisé selon lacune dominante (obs index)
+const AXE_PAR_OBS = [
+  "Travailler l\u2019occupation spatiale et les liaisons entre \u00e9l\u00e9ments (rep\u00e8res au sol, parcours balit\u00e9)",
+  "Consolider le placement nuque et la sym\u00e9trie de pouss\u00e9e dans le roulement avant",
+  "Travailler le groupement et la relance dans le roulement arri\u00e8re",
+  "Automatiser le gainage et l\u2019alignement lors du renversement statique (parade active)",
+  "Acqu\u00e9rir la coordination ceinture scapulaire/pelvienne au renversement dynamique",
+  "Stabiliser les attitudes et formes corporelles identifiables (planche, \u00e9querre, chandelle)",
+  "Engager des \u00e9l\u00e9ments de difficult\u00e9 A avec s\u00e9curit\u00e9 (d\u00e9part facilit\u00e9 + parade)",
+  "R\u00e9aliser des \u00e9l\u00e9ments de difficult\u00e9 B avec gainage ma\u00eetris\u00e9",
+  "Acqu\u00e9rir et ma\u00eetriser les \u00e9l\u00e9ments de difficult\u00e9 C avec contr\u00f4le corporel",
+  "Construire un encha\u00eenement coh\u00e9rent et fluide avec liaisons ma\u00eetris\u00e9es entre \u00e9l\u00e9ments"
+];
+
+// ─────────────────────────────────────────────────────────────────────
+// ÉTAT GLOBAL
+// ─────────────────────────────────────────────────────────────────────
+let eleves = [];       // tableau des données élèves
+let axesChoisis = [];  // indices dans AXES_REF
+let nbSeances = 8;
+let orientationActive = null; // Orientation pédagogique officielle du niveau sélectionné (1AC/2AC/3AC)
+
+// ─────────────────────────────────────────────────────────────────────
+// INIT — génère les 30 lignes de saisie manuelle
+// ─────────────────────────────────────────────────────────────────────
+(function initRows() {
+  const container = document.getElementById("studentRows");
+  for (let i = 1; i <= 30; i++) {
+    const row = document.createElement("div");
+    row.className = "form-grid";
+    row.id = "row" + i;
+    let html = `<input type="text" id="p${i}" placeholder="Élève ${i}">`;
+    for (let j = 0; j < 10; j++) {
+      if (j === 9) {
+        html += `<input type="text" class="deg" id="o${i}_9" placeholder="">`;
+      } else if (j >= 6 && j <= 8) {
+        html += `<input type="number" class="deg" id="o${i}_${j}" min="0" max="12" step="1" placeholder="0-12">`;
+      } else {
+        html += `<select class="deg" id="o${i}_${j}">
+          <option value="">—</option>
+          <option value="D0">D0</option>
+          <option value="D1">D1</option>
+          <option value="D2">D2</option>
+          <option value="D3">D3</option>
+        </select>`;
+      }
+    }
+    row.innerHTML = html;
+    container.appendChild(row);
+    const errDiv = document.createElement("div");
+    errDiv.id = "err" + i;
+    errDiv.className = "err-cell";
+    container.appendChild(errDiv);
+  }
+})();
+
+// ─────────────────────────────────────────────────────────────────────
+// IMPORT CSV — version robuste ADP 2026
+// Compatibilité : virgule · point-virgule · tabulation
+//                 UTF-8 · UTF-8 BOM · Excel · LibreOffice · Google Sheets
+//                 Format grille terrain : N°,Nom et prénom,R.AV,R.AR…
+//                 Format ADP standard  : Nom_Eleve,OBS01_xxx,_Degre…
+// ─────────────────────────────────────────────────────────────────────
+document.getElementById("csvFile").addEventListener("change", function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    importerCSV(ev.target.result);
+  };
+  reader.onerror = function() {
+    const info = document.getElementById("importInfo");
+    info.className = "import-info error";
+    info.textContent = "Erreur de lecture du fichier. Vérifiez que le fichier n'est pas corrompu.";
+  };
+  reader.readAsText(file, "UTF-8");
+});
+
+// ── Détecte automatiquement le séparateur (tab > ; > ,)
+function detecterSeparateur(ligne) {
+  if (ligne.includes('\t')) return '\t';
+  if (ligne.includes(';'))  return ';';
+  return ',';
+}
+
+// ── Normalise une valeur CSV (retire guillemets, espaces)
+function normVal(v) {
+  return (v || "").trim().replace(/^["']|["']$/g, "");
+}
+
+// ── Convertit un score numérique en degré D0-D3
+function scoreToDegre(score) {
+  const s = parseFloat(score);
+  if (isNaN(s)) return "";
+  if (s < SEUIL_B)  return "D0";
+  if (s < SEUIL_C)  return "D1";
+  if (s < 8.75)     return "D2";
+  return "D3";
+}
+
+// ── Table de correspondance colonnes grille terrain → index observable (0-9)
+// j : 0=Org/Esp  1=R.AV  2=R.AR  3=RV.S  4=RV.D  5=Attitude
+//     6=Diff.A   7=Diff.B  8=Diff.C  9=Observation
+const COL_ALIASES = [
+  // j=0 : Organisation / espace
+  { j: 0, mots: ["organisation", "org", "espace", "esp", "obs01"] },
+  // j=1 : Roulement AV
+  { j: 1, mots: ["r.av", "rav", "roulement av", "roulement_av", "obs02"] },
+  // j=2 : Roulement AR
+  { j: 2, mots: ["r.ar", "rar", "roulement ar", "roulement_ar", "obs03"] },
+  // j=3 : Renversement Statique
+  { j: 3, mots: ["rv.s", "rvs", "renversement s", "renversement_s", "statique", "obs04"] },
+  // j=4 : Renversement Dynamique
+  { j: 4, mots: ["rv.d", "rvd", "renversement d", "renversement_d", "dynamique", "obs05"] },
+  // j=5 : Attitude
+  { j: 5, mots: ["attitude", "att", "obs06"] },
+  // j=6 : Difficulté A
+  { j: 6, mots: ["difficulté a", "difficultea", "diff.a", "diffa", "diff a", "obs07"] },
+  // j=7 : Difficulté B
+  { j: 7, mots: ["difficulté b", "difficulteb", "diff.b", "diffb", "diff b", "obs08"] },
+  // j=8 : Difficulté C
+  { j: 8, mots: ["difficulté c", "difficultec", "diff.c", "diffc", "diff c", "obs09"] },
+  // j=9 : Observation (texte libre enseignant)
+  { j: 9, mots: ["observation", "obs", "composition", "enchaînement", "enchainement", "comp", "obs10"] }
+];
+
+// ── Trouve l'index de colonne correspondant à un observable j
+function trouverColonne(cols, j) {
+  const aliases = COL_ALIASES.find(a => a.j === j);
+  if (!aliases) return -1;
+  const colsNorm = cols.map(c => c.toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // retire accents
+    .replace(/[^a-z0-9.]/g, " ").trim()
+  );
+  for (const mot of aliases.mots) {
+    const motNorm = mot.toLowerCase()
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9.]/g, " ").trim();
+    const idx = colsNorm.findIndex(c => c === motNorm || c.includes(motNorm));
+    if (idx >= 0) return idx;
+  }
+  return -1;
+}
+
+// ── Trouve la colonne "Prénom / Nom" dans l'en-tête
+function trouverColonneNom(cols) {
+  const candidats = ["nom et prénom","nom_eleve","prenom","prénom","nom","eleve","élève","name","student"];
+  const colsNorm = cols.map(c => c.toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]/g, " ").trim()
+  );
+  for (const mot of candidats) {
+    const idx = colsNorm.findIndex(c => c === mot || c.includes(mot));
+    if (idx >= 0) return idx;
+  }
+  return -1;
+}
+
+function importerCSV(texte) {
+  const info = document.getElementById("importInfo");
+  const logs = []; // journal de diagnostic
+
+  // ── 1. Supprimer BOM UTF-8 (Excel)
+  texte = texte.replace(/^\uFEFF/, "");
+
+  // ── 2. Découper en lignes
+  const toutesLignes = texte.split(/\r?\n/);
+  logs.push("Lignes brutes détectées : " + toutesLignes.length);
+
+  // ── 3. Trouver la ligne d'en-tête
+  let idxHeader = -1;
+  for (let i = 0; i < Math.min(toutesLignes.length, 10); i++) {
+    const l = toutesLignes[i];
+    if (!l.trim()) continue;
+    const lNorm = l.toLowerCase()
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9;,\t.]/g, " ");
+    // Cherche un marqueur de colonne connu
+    if (
+      lNorm.includes("nom") || lNorm.includes("prenom") || lNorm.includes("eleve") ||
+      lNorm.includes("r.av") || lNorm.includes("rav") || lNorm.includes("obs0") ||
+      lNorm.includes("attitude") || lNorm.includes("difficulte") || lNorm.includes("organisation")
+    ) {
+      idxHeader = i;
+      logs.push("En-tête trouvée ligne " + (i + 1) + " : " + l.substring(0, 80));
+      break;
+    }
+  }
+
+  if (idxHeader < 0) {
+    info.className = "import-info error";
+    info.innerHTML = `❌ En-tête introuvable dans les 10 premières lignes.<br>
+      <small>Colonnes attendues : <em>Nom et prénom</em> (ou Prénom / Nom_Eleve) + <em>R.AV, R.AR, RV.S, RV.D, Attitude, Difficulté A/B/C</em>.<br>
+      Colonnes détectées : ${toutesLignes[0] ? toutesLignes[0].substring(0,120) : "(vide)"}</small>`;
+    console.warn("[DI-GYM Import] Diagnostic :", logs.join(" | "));
+    return;
+  }
+
+  // ── 4. Détecter le séparateur
+  const sep = detecterSeparateur(toutesLignes[idxHeader]);
+  logs.push("Séparateur détecté : " + JSON.stringify(sep));
+
+  // ── 5. Parser l'en-tête
+  const cols = toutesLignes[idxHeader].split(sep).map(normVal);
+  logs.push("Colonnes : " + cols.join(" | "));
+
+  // ── 6. Trouver colonne prénom
+  const idxNom = trouverColonneNom(cols);
+  logs.push("Colonne nom/prénom : index " + idxNom + (idxNom >= 0 ? " = " + cols[idxNom] : " NON TROUVÉE"));
+
+  // ── 7. Construire la carte de colonnes pour les 10 observables
+  const carteObs = {}; // j → index colonne
+  for (let j = 0; j < 10; j++) {
+    const idx = trouverColonne(cols, j);
+    if (idx >= 0) {
+      carteObs[j] = idx;
+      logs.push("Observable j=" + j + " → col " + idx + " (" + cols[idx] + ")");
+    } else {
+      logs.push("Observable j=" + j + " → NON TROUVÉ");
+    }
+  }
+
+  // ── 8. Lire les lignes de données
+  let chargés = 0, ignorés = 0;
+
+  for (let i = idxHeader + 1; i < toutesLignes.length && chargés < 30; i++) {
+    const ligne = toutesLignes[i].trim();
+    if (!ligne) { ignorés++; continue; }
+
+    const vals = ligne.split(sep).map(normVal);
+
+    // Ignorer lignes bilan / totaux
+    const premierVal = (vals[0] || "").toUpperCase();
+    if (premierVal.startsWith("BILAN") || premierVal.startsWith("TOTAL") || premierVal.startsWith("MOY")) {
+      ignorés++; continue;
+    }
+
+    // Déterminer le prénom
+    let prenom = "";
+    if (idxNom >= 0 && vals[idxNom]) {
+      prenom = vals[idxNom];
+    } else {
+      // Fallback : première colonne non numérique non vide
+      for (const v of vals) {
+        if (v && isNaN(Number(v))) { prenom = v; break; }
+      }
+    }
+
+    if (!prenom) { ignorés++; continue; }
+
+    const rowIdx = chargés + 1;
+    document.getElementById("p" + rowIdx).value = prenom;
+
+    // ── Remplir les 10 observables
+    for (let j = 0; j < 10; j++) {
+      const colIdx = carteObs[j];
+      if (colIdx === undefined || colIdx < 0 || colIdx >= vals.length) continue;
+      const brut = vals[colIdx];
+      if (!brut) continue;
+
+      // j=9 : texte libre (Observation enseignant)
+      if (j === 9) {
+        document.getElementById("o" + rowIdx + "_9").value = brut;
+        continue;
+      }
+
+      // j=6..8 : entier 0-12 (Difficulté A/B/C)
+      if (j >= 6 && j <= 8) {
+        const n = parseInt(brut, 10);
+        if (Number.isInteger(n) && n >= 0 && n <= 12) {
+          document.getElementById("o" + rowIdx + "_" + j).value = String(n);
+        }
+        continue;
+      }
+
+      // j=0..5 : degré D0/D1/D2/D3 ou score numérique
+      const brutUpper = brut.toUpperCase();
+      let degre = "";
+      if (["D0","D1","D2","D3"].includes(brutUpper)) {
+        degre = brutUpper;
+      } else {
+        // Accepter aussi les formats 0/1/2/3 → D0/D1/D2/D3
+        if (brut === "0") degre = "D0";
+        else if (brut === "1") degre = "D1";
+        else if (brut === "2") degre = "D2";
+        else if (brut === "3") degre = "D3";
+        else degre = scoreToDegre(brut);
+      }
+      if (degre) {
+        document.getElementById("o" + rowIdx + "_" + j).value = degre;
+      }
+    }
+
+    chargés++;
+  }
+
+  // ── 9. Rapport final
+  console.info("[DI-GYM Import] Diagnostic :\n" + logs.join("\n"));
+
+  if (chargés === 0) {
+    info.className = "import-info error";
+    info.innerHTML = `❌ Aucun élève importé. Vérifiez le format du fichier.<br>
+      <small>Colonnes reconnues : ${Object.keys(carteObs).length}/10 · Colonne nom : ${idxNom >= 0 ? "✓ " + cols[idxNom] : "✗ non trouvée"}<br>
+      Consultez la console du navigateur (F12) pour le journal complet.</small>`;
+    return;
+  }
+
+  const obsReconnus = Object.keys(carteObs).length;
+  info.className = "import-info success";
+  info.innerHTML = `✅ ${chargés} élève(s) importé(s) avec succès.`
+    + (ignorés > 0 ? ` ${ignorés} ligne(s) ignorée(s).` : "")
+    + ` · ${obsReconnus}/10 observables reconnus.`
+    + (obsReconnus < 10
+        ? ` <span style="color:var(--orange)">⚠ Certains observables non trouvés — complétez manuellement si besoin.</span>`
+        : "");
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// ANALYSER
+// ─────────────────────────────────────────────────────────────────────
+function analyser() {
+  eleves = [];
+  let erreurs = 0;
+  for (let i = 1; i <= 30; i++) {
+    document.getElementById("err" + i).textContent = "";
+    const prenom = document.getElementById("p" + i).value.trim();
+    if (!prenom) continue;
+    const scores = [];      // scores j=0..5 : valeurs ABC converties (3/6/9)
+    const diffScores = [];  // scores j=6..8 : entiers bruts 0-12
+    let observation = "";   // texte libre pour j=9
+    let manquant = false;
+
+    // j=0..5 : sélect A/B/C obligatoire
+    for (let j = 0; j < 6; j++) {
+      const d = document.getElementById("o" + i + "_" + j).value;
+      if (!d) { manquant = true; break; }
+      scores.push(DEG_SCORE[d]);
+    }
+
+    // j=6..8 : entier 0-12 obligatoire
+    if (!manquant) {
+      for (let j = 6; j <= 8; j++) {
+        const raw = document.getElementById("o" + i + "_" + j).value;
+        if (raw === "" || raw === null) { manquant = true; break; }
+        const val = parseInt(raw, 10);
+        if (isNaN(val) || !Number.isInteger(val) || val < 0 || val > 12) { manquant = true; break; }
+        diffScores.push(val);
+      }
+    }
+
+    observation = document.getElementById("o" + i + "_9").value.trim();
+
+    if (manquant) {
+      document.getElementById("err" + i).textContent = "⚠ Observables 1-6 : D0/D1/D2/D3 requis · Diff.A/B/C : entier 0-12 requis";
+      erreurs++;
+      continue;
+    }
+
+    // Moyenne et profil calculés sur les 6 observables A/B/C uniquement
+    const moy = scores.reduce((a,b) => a+b, 0) / scores.length;
+    const profil = moy >= SEUIL_C ? "C" : moy >= SEUIL_B ? "B" : "A";
+
+    // Profil détaillé : j=0..5 en D0/D1/D2/D3, j=6..8 en valeur brute
+    const profilDetail = [
+      ...scores.map(s => s >= DEG_SCORE.D3 ? "D3" : s >= DEG_SCORE.D2 ? "D2" : s >= DEG_SCORE.D1 ? "D1" : "D0"),
+      ...diffScores.map(v => String(v))
+    ];
+
+    // Lacunes sur j=0..5 uniquement (échelle D0/D1/D2/D3)
+    const lacunes = [];
+    for (let j = 0; j < 6; j++) {
+      if (scores[j] < DEG_SCORE.D1) lacunes.push({ obs: j, score: scores[j] });
+    }
+    // Lacunes Diff : si valeur < 4 (niveau bas sur 12), considérée comme lacune
+    for (let j = 0; j < 3; j++) {
+      if (diffScores[j] < 4) lacunes.push({ obs: j + 6, score: diffScores[j], isDiff: true });
+    }
+    lacunes.sort((a,b) => a.score - b.score);
+    const lacuneStr = lacunes.length > 0
+      ? lacunes.map((l,k) => {
+          const echelle = l.isDiff ? "/12" : "/10";
+          return "L" + (k+1) + " — " + OBS_NOMS[l.obs] + " : " + l.score + echelle;
+        }).join(" | ")
+      : "Aucune lacune identifiée";
+    // Axe prioritaire personnalisé
+    const axePrio = lacunes.length > 0 ? AXE_PAR_OBS[lacunes[0].obs] : "Approfondir et tutorat : encha\u00eenement C avec \u00e9l\u00e9ments de difficult\u00e9";
+    const sa = SA_PAR_PROFIL[profil];
+    eleves.push({ prenom, scores, diffScores, observation, moy, profil, profilDetail, lacunes, lacuneStr, axePrio, sa });
+  }
+  if (eleves.length === 0) { alert("Aucun élève saisi correctement."); return; }
+  afficherResultats();
+  const bloc = document.getElementById("resultatEtape1");
+  bloc.style.display = "block";
+  // Fix #13 : scroll automatique vers les résultats
+  setTimeout(() => bloc.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
+  // Mise à jour sauvegarde avec résultats d'analyse
+  sauvegarderDonnees(true);
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// AFFICHER RÉSULTATS
+// ─────────────────────────────────────────────────────────────────────
+function afficherResultats() {
+  const nbA = eleves.filter(e => e.profil === "A").length;
+  const nbB = eleves.filter(e => e.profil === "B").length;
+  const nbC = eleves.filter(e => e.profil === "C").length;
+  const moyClasse = eleves.reduce((s,e) => s + e.moy, 0) / eleves.length;
+
+  // Décision dominante
+  const banner = document.getElementById("decisionBanner");
+  let decCls, decTxt;
+  if (nbA >= nbB && nbA >= nbC) {
+    decCls = "dec-A"; decTxt = "🔴 Classe débutante — Priorité aux fondamentaux (gainage, roulement, espace)";
+  } else if (nbC > nbA && nbC > nbB) {
+    decCls = "dec-C"; decTxt = "🟢 Classe avancée — Approfondissement et tutorat croisé";
+  } else {
+    decCls = "dec-B"; decTxt = "🟡 Classe intermédiaire — Différenciation A / B active";
+  }
+  banner.className = "decision-banner " + decCls;
+  banner.textContent = decTxt;
+
+  // Stat cards
+  const sr = document.getElementById("statRow");
+  sr.innerHTML = `
+    <div class="stat-card stat-A"><div class="val">${nbA}</div><div class="lbl">Profil A — ${Math.round(nbA/eleves.length*100)}%</div></div>
+    <div class="stat-card stat-B"><div class="val">${nbB}</div><div class="lbl">Profil B — ${Math.round(nbB/eleves.length*100)}%</div></div>
+    <div class="stat-card stat-C"><div class="val">${nbC}</div><div class="lbl">Profil C — ${Math.round(nbC/eleves.length*100)}%</div></div>
+    <div class="stat-card stat-n"><div class="val">${moyClasse.toFixed(1)}</div><div class="lbl">Moy. classe /10 (${(moyClasse*2).toFixed(1)}/20)</div></div>
+  `;
+
+  // Analyse par observable — avec barres de progression
+  const oa = document.getElementById("obsAnalyse");
+  let obsHtml = "<table><thead><tr><th>Observable</th><th>Moy. classe</th><th>Niveau</th><th>État</th><th>SA prioritaire</th></tr></thead><tbody>";
+  for (let j = 0; j < 6; j++) {
+    const moys = eleves.map(e => e.scores[j]);
+    const mObs = moys.reduce((a,b) => a+b, 0) / moys.length;
+    const pct = Math.round(mObs / 10 * 100);
+    const barColor = mObs < DEG_SCORE.D1 ? "var(--rouge)" : mObs < DEG_SCORE.D2 ? "var(--orange)" : "var(--vert)";
+    let etat, saT;
+    if (mObs < DEG_SCORE.D1) {
+      etat = '<span class="profil-A">Lacune collective</span>'; saT = "SA-A1 — prioritaire à renforcer";
+    } else if (mObs < DEG_SCORE.D2) {
+      etat = '<span class="profil-B">En cours</span>'; saT = "SA-B1 — consolider";
+    } else {
+      etat = '<span class="profil-C">Bon niveau</span>'; saT = "SA-C1 — approfondir";
+    }
+    obsHtml += `<tr><td>${OBS_NOMS[j]}</td>
+      <td><div class="obs-bar-wrap"><div class="obs-bar"><div class="obs-bar-fill" style="width:${pct}%;background:${barColor}"></div></div><span class="obs-bar-val">${mObs.toFixed(1)}/10</span></div></td>
+      <td style="font-size:.68rem;color:#666">${pct}%</td><td>${etat}</td><td>${saT}</td></tr>`;
+  }
+  for (let j = 0; j < 3; j++) {
+    const moys = eleves.map(e => e.diffScores[j]);
+    const mObs = moys.reduce((a,b) => a+b, 0) / moys.length;
+    const pct = Math.round(mObs / 12 * 100);
+    const barColor = mObs < 4 ? "var(--rouge)" : mObs < 8 ? "var(--orange)" : "var(--vert)";
+    let etat, saT;
+    if (mObs < 4) {
+      etat = '<span class="profil-A">Lacune collective</span>'; saT = "SA-A1 — prioritaire à renforcer";
+    } else if (mObs < 8) {
+      etat = '<span class="profil-B">En cours</span>'; saT = "SA-B1 — consolider";
+    } else {
+      etat = '<span class="profil-C">Bon niveau</span>'; saT = "SA-C1 — approfondir";
+    }
+    obsHtml += `<tr><td>${OBS_NOMS[j + 6]}</td>
+      <td><div class="obs-bar-wrap"><div class="obs-bar"><div class="obs-bar-fill" style="width:${pct}%;background:${barColor}"></div></div><span class="obs-bar-val">${mObs.toFixed(1)}/12</span></div></td>
+      <td style="font-size:.68rem;color:#666">${pct}%</td><td>${etat}</td><td>${saT}</td></tr>`;
+  }
+  obsHtml += "</tbody></table>";
+  oa.innerHTML = obsHtml;
+
+  // Groupes de besoin
+  const gb = document.getElementById("groupesBesoin");
+  gb.innerHTML = [
+    { profil: "A", eff: nbA, sa: SA_PAR_PROFIL.A, cls: "profil-A" },
+    { profil: "B", eff: nbB, sa: SA_PAR_PROFIL.B, cls: "profil-B" },
+    { profil: "C", eff: nbC, sa: SA_PAR_PROFIL.C, cls: "profil-C" }
+  ].map(g => `<div style="padding:8px 0;border-bottom:1px solid var(--gris-m)">
+    <span class="${g.cls}">${g.profil}</span>
+    <strong style="margin-left:8px">${g.eff} élève(s)</strong>
+    <span style="font-size:.75rem;color:#555;margin-left:8px">${g.sa}</span>
+  </div>`).join("");
+
+  // Tableau individuel (trié par profil puis moy desc)
+  const triés = [...eleves].sort((a,b) => {
+    const op = { A: 0, B: 1, C: 2 };
+    return op[a.profil] - op[b.profil] || b.moy - a.moy;
+  });
+  const tbody = document.getElementById("tbodyIndiv");
+  tbody.innerHTML = "";
+  triés.forEach((e, idx) => {
+    const tr = document.createElement("tr");
+    tr.className = "row-" + e.profil;
+    tr.innerHTML = `
+      <td>${idx+1}</td>
+      <td><strong>${e.prenom}</strong></td>
+      ${e.scores.map(s => `<td>${s >= DEG_SCORE.D3 ? "D3" : s >= DEG_SCORE.D2 ? "D2" : s >= DEG_SCORE.D1 ? "D1" : "D0"}</td>`).join("")}
+      ${e.diffScores.map(v => `<td>${v}</td>`).join("")}
+      <td>${e.observation || "—"}</td>
+      <td>${e.moy.toFixed(1)}</td>
+      <td>${(e.moy*2).toFixed(1)}</td>
+      <td><span class="profil-${e.profil}">${e.profil}</span></td>
+      <td style="font-size:.68rem">${e.profilDetail.join(" / ")}</td>
+      <td style="font-size:.68rem">${e.lacuneStr}</td>
+      <td style="font-size:.68rem">${e.axePrio}</td>
+      <td style="font-size:.68rem">${e.sa}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // 📋 Éléments gymniques recommandés — s'actualise avec chaque nouvelle analyse
+  genererElementsRecommandes();
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// EXPORT CSV
+// ─────────────────────────────────────────────────────────────────────
+function exportCSV() {
+  const BOM = "\uFEFF";
+  const cols = ["Prénom","OE","R.AV","R.AR","RV.S","RV.D","Att.","Diff.A","Diff.B","Diff.C","Observation","Moyenne","Note/20","Rang","Profil","Profil détaillé","Lacune 1","SA recommandée"];
+  let csv = BOM + cols.join(";") + "\n";
+  const triés = [...eleves].sort((a,b) => b.moy - a.moy);
+  triés.forEach((e,i) => {
+    const degs = e.scores.map(s => s >= DEG_SCORE.D3 ? "D3" : s >= DEG_SCORE.D2 ? "D2" : s >= DEG_SCORE.D1 ? "D1" : "D0");
+    csv += [
+      e.prenom,
+      ...degs,
+      ...e.diffScores,
+      e.observation || "",
+      e.moy.toFixed(2),
+      (e.moy*2).toFixed(2),
+      i+1,
+      e.profil,
+      e.profilDetail.join(" / "),
+      e.lacunes.length > 0 ? OBS_NOMS[e.lacunes[0].obs] + " : " + e.lacunes[0].score+"/10" : "Aucune",
+      e.sa
+    ].join(";") + "\n";
+  });
+  const now = new Date();
+  const dateStr = now.getFullYear() + ("0"+(now.getMonth()+1)).slice(-2) + ("0"+now.getDate()).slice(-2);
+  const a = document.createElement("a");
+  a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
+  a.download = "outil_v0_GYM_DI-GYM_" + dateStr + ".csv";
+  a.click();
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// ÉTAPE 2 — AXES
+// ─────────────────────────────────────────────────────────────────────
+function allerEtape2() {
+  // Calculer pertinence de chaque axe depuis données réelles
+  const pertinences = AXES_REF.map(ax => {
+    if (eleves.length === 0) return 50;
+    // obs=9 (Observation) : texte libre enseignant, pas de score → pertinence neutre
+    if (ax.obs === 9) return 50;
+    // obs=6..8 : diffScores (entier 0-12), lacune si < 4
+    if (ax.obs >= 6 && ax.obs <= 8) {
+      const nbLacune = eleves.filter(e => e.diffScores[ax.obs - 6] < 4).length;
+      return Math.round(nbLacune / eleves.length * 100);
+    }
+    // obs=0..5 : scores D0/D1/D2/D3
+    const nbLacune = eleves.filter(e => e.scores[ax.obs] < DEG_SCORE.D1).length;
+    return Math.round(nbLacune / eleves.length * 100);
+  });
+  // Bonus « Orientations pédagogiques » : les axes alignés avec les priorités
+  // officielles du niveau sélectionné sont légèrement remontés dans le classement
+  // (les données terrain restent le critère principal — le niveau vient affiner).
+  if (orientationActive) {
+    AXES_REF.forEach((ax, i) => {
+      if (orientationActive.axesPrioritairesIds.includes(ax.id)) {
+        pertinences[i] = Math.min(100, pertinences[i] + 12);
+      }
+    });
+  }
+  // Trier par pertinence
+  const ordre = AXES_REF.map((a,i) => i).sort((a,b) => pertinences[b] - pertinences[a]);
+
+  // Bandeau « Orientations pédagogiques » compact
+  const mini = document.getElementById("orientationMiniEtape2");
+  if (mini) {
+    if (orientationActive) {
+      mini.innerHTML = `📘 <strong>${orientationActive.label}</strong> — Composition attendue : ${_libelleComposition(orientationActive)}. Les axes ci-dessous tiennent compte de cette orientation officielle.`;
+      mini.classList.add("visible");
+    } else {
+      mini.classList.remove("visible");
+      mini.innerHTML = "";
+    }
+  }
+
+  const cont = document.getElementById("axesContainer");
+  cont.innerHTML = "";
+  axesChoisis = [];
+  ordre.forEach(i => {
+    const ax = AXES_REF[i];
+    const pert = pertinences[i];
+    const pertCls = pert >= 60 ? "pert-high" : pert >= 30 ? "pert-mid" : "pert-low";
+    const pertLabel = pert >= 60 ? "🔴 Forte lacune" : pert >= 30 ? "🟡 Lacune modérée" : "🟢 Niveau correct";
+    // Pré-cocher automatiquement si pertinence >= 60% et moins de 4 déjà cochés
+    const preCocher = pert >= 60 && axesChoisis.length < 4;
+    if (preCocher) axesChoisis.push(i);
+    const div = document.createElement("div");
+    div.className = "axe-card" + (preCocher ? " selected" : "");
+    div.id = "axeCard_" + i;
+    div.innerHTML = `<label>
+      <input type="checkbox" id="chk_${i}" ${preCocher ? "checked" : ""} onchange="toggleAxe(${i})">
+      <div>
+        <div class="axe-title">${ax.id} — ${ax.titre}</div>
+        <div class="axe-meta">${ax.objectif}</div>
+        <div class="axe-meta">Observable lié : ${OBS_NOMS[ax.obs]} · Code : ${ax.code}</div>
+        <div class="axe-pert ${pertCls}">${pertLabel} — ${pert}% des élèves concernés</div>
+        <div class="axe-meta">${ax.sa}</div>
+      </div>
+    </label>`;
+    cont.appendChild(div);
+  });
+  // Mise à jour du bouton étape 3
+  document.getElementById("btnEtape3").disabled = axesChoisis.length < 3;
+  document.getElementById("axeMsg").textContent = axesChoisis.length < 3 ? "Sélectionnez au moins 3 axes pour continuer." : "";
+
+  afficherSection(2);
+}
+
+function toggleAxe(i) {
+  const chk = document.getElementById("chk_" + i);
+  const card = document.getElementById("axeCard_" + i);
+  const msg = document.getElementById("axeMsg");
+  if (chk.checked) {
+    if (axesChoisis.length >= 4) {
+      chk.checked = false;
+      msg.textContent = "Maximum 4 axes atteint — décochez un axe pour en choisir un autre.";
+      return;
+    }
+    axesChoisis.push(i);
+    card.classList.add("selected");
+  } else {
+    axesChoisis = axesChoisis.filter(x => x !== i);
+    card.classList.remove("selected");
+  }
+  msg.textContent = axesChoisis.length < 3 ? "Sélectionnez au moins 3 axes pour continuer." : "";
+  document.getElementById("btnEtape3").disabled = axesChoisis.length < 3;
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// ÉTAPE 3 — SLIDER
+// ─────────────────────────────────────────────────────────────────────
+// Distribution séquences : [nbAxes][nbSeances - 6]
+const DISTRIB = {
+  3: [[2,2,2],[2,2,3],[3,2,3],[3,3,3],[3,4,3]],
+  4: [[1,2,2,1],[2,2,2,1],[2,2,2,2],[2,3,2,2],[3,2,3,2]]
+};
+
+function allerEtape3() {
+  const label = document.getElementById("axesSelLabel");
+  label.textContent = axesChoisis.map(i => AXES_REF[i].id).join(" · ");
+  nbSeances = parseInt(document.getElementById("sliderSeances").value);
+  updateSlider();
+  _afficherReferenceElements();
+  afficherSection(3);
+}
+
+/** Affiche, en lecture seule, la liste des éléments gymniques actifs (issus de l'étape ①)
+ *  regroupés par famille — sert de base de référence pour construire les séances. */
+function _afficherReferenceElements() {
+  const cible = document.getElementById("elementsRefEtape3");
+  if (!cible) return;
+  const actifs = BANQUE_ELEMENTS.map((fam, fi) => ({
+    nom: fam.nom,
+    elements: fam.elements.filter((el, ei) => elementsActifs[_idElement(fi, ei)])
+  })).filter(f => f.elements.length > 0);
+
+  if (actifs.length === 0) {
+    cible.innerHTML = `<p style="font-size:.76rem;color:var(--texte-m);margin:14px 0">
+      ℹ️ Aucun élément gymnique activé à l'étape ① — passez par "📋 Éléments gymniques recommandés" pour en sélectionner.
+    </p>`;
+    return;
+  }
+  cible.innerHTML = `
+    <div class="card" style="margin-top:14px;background:var(--rose-l);border:1px solid var(--rose)">
+      <div class="card-title" style="border-bottom:none">📋 Éléments gymniques actifs pour ce cycle</div>
+      <div style="font-size:.76rem;color:var(--texte-s);line-height:1.7">
+        ${actifs.map(f => `<strong style="color:var(--bleu)">${f.nom}</strong> : ${f.elements.map(el => `${el.n} (${el.d})`).join(" · ")}`).join("<br>")}
+      </div>
+    </div>`;
+}
+
+function updateSlider() {
+  nbSeances = parseInt(document.getElementById("sliderSeances").value);
+  document.getElementById("sliderVal").textContent = nbSeances;
+  const preview = document.getElementById("sliderPreview");
+  if (axesChoisis.length === 0) {
+    preview.innerHTML = "<em style='color:#888;font-size:.76rem'>Aucun axe sélectionné.</em>";
+    return;
+  }
+  const nb = axesChoisis.length <= 3 ? 3 : 4;
+  const dist = DISTRIB[nb][nbSeances - 6];
+  if (!dist) return;
+  const nb_seq = dist.length;
+  const dureeMin = nbSeances * 55;
+  const dureeH = Math.floor(dureeMin / 60);
+  const dureeM = dureeMin % 60;
+  let html = `<strong>Cycle de ${nbSeances} séances · ${nb_seq} séquences · ~${dureeH}h${dureeM > 0 ? dureeM : ""} (à 55 min/séance)</strong><br><br>`;
+  let cumulSéance = 0;
+  dist.forEach((n, idx) => {
+    const axIdx = axesChoisis[Math.min(idx, axesChoisis.length - 1)];
+    const ax = AXES_REF[axIdx];
+    cumulSéance += n;
+    html += `<div class="seq-line">📌 Séquence ${idx+1} (${n} séance${n>1?"s":""}) — ${ax.id} : ${ax.titre.substring(0,55)}…</div>`;
+  });
+  preview.innerHTML = html;
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// ÉTAPE 4 — PLANIFICATION
+// ─────────────────────────────────────────────────────────────────────
+function allerEtape4() {
+  const nb = axesChoisis.length <= 3 ? 3 : 4;
+  const dist = DISTRIB[nb][nbSeances - 6];
+  const cont = document.getElementById("planifContainer");
+  cont.innerHTML = "";
+
+  let numSeanceGlobal = 0;
+  dist.forEach((nbSea, seqIdx) => {
+    const axIdx = axesChoisis[Math.min(seqIdx, axesChoisis.length - 1)];
+    const ax = AXES_REF[axIdx];
+    const block = document.createElement("div");
+    block.className = "seq-block";
+
+    let header = `<div class="seq-header">Séquence ${seqIdx+1} — ${ax.titre} <span>(${nbSea} séance${nbSea>1?"s":""} · ${ax.code})</span></div>`;
+
+    let grid = `<div class="seance-row seance-header">
+      <div class="seance-cell">S.</div>
+      <div class="seance-cell">Axe dominant</div>
+      <div class="seance-cell">Objectif</div>
+      <div class="seance-cell cell-A">Groupe A — Débutants</div>
+      <div class="seance-cell cell-B">Groupe B — Intermédiaires</div>
+      <div class="seance-cell cell-C">Groupe C — Avancés</div>
+    </div>`;
+
+    for (let s = 0; s < nbSea; s++) {
+      numSeanceGlobal++;
+      const isLast = (s === nbSea - 1);
+      const isLastCycle = (seqIdx === dist.length - 1) && isLast;
+
+      const contA = genContenu("A", ax, seqIdx, s);
+      const contB = genContenu("B", ax, seqIdx, s);
+      const contC = genContenu("C", ax, seqIdx, s);
+
+      grid += `<div class="seance-row">
+        <div class="seance-cell seance-num">${numSeanceGlobal}</div>
+        <div class="seance-cell"><strong>${ax.id}</strong><br><span style="font-size:.68rem">${ax.code}</span></div>
+        <div class="seance-cell" style="font-size:.72rem">${isLastCycle ? "Évaluation formative — bilan de cycle" : ax.objectif}</div>
+        <div class="seance-cell cell-A">
+          <div class="cell-label">Groupe A</div>
+          <div class="cell-sa">${contA.sa}</div>
+          <div>${contA.consigne}</div>
+          <div class="cell-cr">✓ ${contA.cr}</div>
+        </div>
+        <div class="seance-cell cell-B">
+          <div class="cell-label">Groupe B</div>
+          <div class="cell-sa">${contB.sa}</div>
+          <div>${contB.consigne}</div>
+          <div class="cell-cr">✓ ${contB.cr}</div>
+        </div>
+        <div class="seance-cell cell-C">
+          <div class="cell-label">Groupe C</div>
+          <div class="cell-sa">${contC.sa}</div>
+          <div>${contC.consigne}</div>
+          <div class="cell-cr">✓ ${contC.cr}</div>
+        </div>
+      </div>`;
+
+      if (!isLast) {
+        grid += `<div class="indicatif">📋 À observer avant la séance suivante — ${ax.conduite} <em style="opacity:.7">(Indicatif — décision de progression : vous)</em></div>`;
+      }
+    }
+
+    block.innerHTML = header + `<div class="tbl-wrap">${grid}</div>`;
+    cont.appendChild(block);
+  });
+
+  // Résumé
+  const nbA = eleves.filter(e => e.profil === "A").length;
+  const nbB = eleves.filter(e => e.profil === "B").length;
+  const nbC = eleves.filter(e => e.profil === "C").length;
+  const domProfil = nbA >= nbB && nbA >= nbC ? "A" : nbC > nbA && nbC > nbB ? "C" : "B";
+  const domNb = { A: nbA, B: nbB, C: nbC }[domProfil];
+  const domPct = eleves.length > 0 ? Math.round(domNb / eleves.length * 100) : 0;
+  const reeval = dist.length >= 2 ? Math.ceil(dist.length / 2) : 1;
+
+  const enseignant = _getNomEnseignant();
+  const classe     = document.getElementById("sessClasse")?.value     || "—";
+  const dateCol    = document.getElementById("sessDate")?.value       || "—";
+  const etab       = document.getElementById("sessEtablissement")?.value || "";
+  const annee      = document.getElementById("sessAnnee")?.value         || "";
+
+  document.getElementById("resumeCycle").innerHTML = `
+    <div class="card">
+      <div class="card-title">📈 Résumé du cycle</div>
+      <div style="font-size:.75rem;color:#555;margin-bottom:10px">
+        ${etab ? "🏫 " + etab + " &nbsp;·&nbsp; " : ""}👤 ${enseignant} &nbsp;·&nbsp; 🏷️ ${classe} &nbsp;·&nbsp; 📅 Diagnostic : ${dateCol}${annee ? " &nbsp;·&nbsp; 🗓️ " + annee : ""}
+      </div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Séquence</th><th>Axes travaillés</th><th>Séances</th><th>Profil ciblé</th></tr></thead>
+        <tbody>
+          ${dist.map((n,i) => {
+            const axIdx = axesChoisis[Math.min(i, axesChoisis.length - 1)];
+            const ax = AXES_REF[axIdx];
+            return `<tr><td>Séq. ${i+1}</td><td>${ax.id} — ${ax.titre.substring(0,40)}…</td><td>${n}</td><td>${i===0?"Tous (A prioritaire)":i===dist.length-1?"B consolidation + C approfondissement":"Différenciation A/B/C"}</td></tr>`;
+          }).join("")}
+        </tbody>
+      </table></div>
+      <div class="resume-card">
+        Ce cycle de <strong>${nbSeances} séances</strong> cible <strong>${axesChoisis.length} axes prioritaires</strong>.
+        Profil le plus concerné : <strong>${domProfil}</strong> (${domNb} élève${domNb>1?"s":""} · ${domPct}%).
+        Réévaluer après la séquence <strong>${reeval}</strong> avec une nouvelle collecte terrain.
+        ${orientationActive ? `<br>📘 <strong>${orientationActive.label}</strong> — Composition officielle attendue de l'enchaînement : <strong>${_libelleComposition(orientationActive)}</strong>.` : ""}
+      </div>
+    </div>
+  `;
+
+  afficherSection(4);
+}
+
+// Génère le contenu pédagogique par groupe selon axe
+function genContenu(groupe, ax, seqIdx, seaIdx) {
+  const data = {
+    AX1: {
+      A: { sa: "SA-A1", consigne: "Tenir la planche ventrale 5 s avec gainage actif (dos plat, ventre rentré)", cr: "Dos plat observable pendant 5 s" },
+      B: { sa: "SA-B1", consigne: "Enchaîner chandelle + roulement avec gainage maintenu à la réception", cr: "Alignement tronc-jambes en chandelle" },
+      C: { sa: "SA-C1", consigne: "Renversement dynamique avec maintien du gainage depuis l'appel jusqu'à la réception", cr: "Alignement tronc-bras visible lors de l'inversion" }
+    },
+    AX2: {
+      A: { sa: "SA-A1", consigne: "Rouler vers l'avant en plaçant la nuque au départ (menton poitrine) sur tapis incliné", cr: "Roulement sans chute latérale ni déviation" },
+      B: { sa: "SA-B1", consigne: "Roulement avant groupé avec relance debout sans arrêt (repère ruban au sol)", cr: "Relance en station debout équilibrée" },
+      C: { sa: "SA-C1", consigne: "Enchaîner roulement avant + renversement statique sans rupture de rythme", cr: "Liaison fluide et rectiligne" }
+    },
+    AX3: {
+      A: { sa: "SA-A2", consigne: "Parcourir les 3 zones du praticable (balisées) en enchaînant 4 éléments simples", cr: "Au moins 2 zones distinctes utilisées" },
+      B: { sa: "SA-B3", consigne: "Construire une carte d'enchaînement couvrant tout l'espace, puis l'exécuter", cr: "Déplacement visible d'une zone à l'autre" },
+      C: { sa: "SA-C1", consigne: "Enchaînement varié (6 éléments) en exploitant les 4 coins du praticable", cr: "Occupation équilibrée de tout l'espace" }
+    },
+    AX4: {
+      A: { sa: "SA-A1", consigne: "Station renversée contre le mur avec pareur, tenir 3 s — répéter 3 fois", cr: "3 tentatives sans refus" },
+      B: { sa: "SA-B2", consigne: "Renversement statique avec départ libre et parade active du pareur", cr: "Alignement bras-tronc visible en position inversée" },
+      C: { sa: "SA-C1", consigne: "Renversement dynamique intégré dans un enchaînement de 5 éléments", cr: "Renversement réussi dans le contexte de l'enchaînement" }
+    },
+    AX5: {
+      A: { sa: "SA-A1", consigne: "Réaliser 4 éléments simples avec une transition comptée (max 2 s entre chaque)", cr: "Aucun arrêt de plus de 2 s" },
+      B: { sa: "SA-B3", consigne: "Exécuter la carte personnelle de 5 éléments chronométrée, sans pause", cr: "Fluidité observable, pas de pause visible" },
+      C: { sa: "SA-C1", consigne: "Enchaînement de 7 éléments dont au moins un renversement, en rythme continu", cr: "Enchaînement logique et ambitieux évalué" }
+    },
+    AX6: {
+      A: { sa: "SA-A1", consigne: "Dissociation ceintures : bouger les bras sans bouger le bassin (allongé)", cr: "Mouvement segmentaire isolé réussi 3 fois" },
+      B: { sa: "SA-B2", consigne: "Renversement statique avec contrôle du relâché pelvien pendant l'inversion", cr: "Alignement vertical observé par le pareur" },
+      C: { sa: "SA-C1", consigne: "Renversement dynamique avec dissociation scapulaire/pelvienne maîtrisée", cr: "Alignement rachidien optimal noté par l'observateur" }
+    },
+    AX7: {
+      A: { sa: "SA-A2", consigne: "Réaliser 4 éléments simples en veillant à enchaîner sans s'arrêter (signal sonore entre éléments)", cr: "Moins de 3 secondes entre deux éléments sur la totalité" },
+      B: { sa: "SA-B3", consigne: "Exécuter une carte d'enchaînement de 6 éléments avec liaisons imposées (pont, rouler, tourner)", cr: "Au moins 2 liaisons observables et continues" },
+      C: { sa: "SA-C2", consigne: "Construire un enchaînement personnel de 6 à 8 éléments avec contraintes de continuité et d'occupation de l'espace — exécuter sans arrêt", cr: "Enchaînement continu avec moins de 2 s d'arrêt entre les éléments" }
+    }
+  };
+  const d = data[ax.id] ? data[ax.id][groupe] : { sa: ax.sa, consigne: ax.objectif, cr: "Comportement attendu observable" };
+  return d;
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// NAVIGATION
+// ─────────────────────────────────────────────────────────────────────
+function allerEtape1() {
+  axesChoisis = [];
+  afficherSection(1);
+}
+
+function afficherSection(n) {
+  [0,1,2,3,4].forEach(i => {
+    const sec = document.getElementById("sec" + i);
+    if (sec) sec.classList.toggle("visible", i === n);
+  });
+
+  const stCfg = document.getElementById("stCfg");
+  if (stCfg) stCfg.classList.toggle("active", n === 0);
+
+  [1,2,3,4].forEach(i => {
+    const st = document.getElementById("st" + i);
+    st.classList.remove("active","done");
+    if (i === n) st.classList.add("active");
+    else if (i < n && n !== 0) st.classList.add("done");
+  });
+
+  // La barre résumé de session n'a de sens qu'une fois le diagnostic démarré
+  const barre = document.getElementById("sessionBarSummary");
+  if (barre) barre.style.display = (n === 0) ? "none" : "flex";
+  if (n !== 0) _majResumeSession();
+
+  // La barre de navigation (stepper) n'apparaît qu'une fois le diagnostic démarré.
+  // Sur la page d'accueil / configuration (section 0), elle reste masquée.
+  const stepper = document.getElementById("stepper");
+  if (stepper) stepper.classList.toggle("stepper-hidden", n === 0);
+
+  window.scrollTo(0,0);
+}
+
+/** Démarre le diagnostic depuis la page d'accueil : synchronise les infos de classe puis ouvre l'étape ①. */
+function demarrerDiagnostic() {
+  _syncClasseLabel();
+  sauvegarderDonnees(true);
+  afficherSection(1);
+}
+
+/** Recompose le champ (masqué) sessClasse à partir de Niveau + Groupe, et met à jour la barre résumé. */
+function _syncClasseLabel() {
+  const niveau = document.getElementById("sessNiveau")?.value || "";
+  const groupe = document.getElementById("sessGroupe")?.value || "";
+  const label = [niveau, groupe].filter(Boolean).join(" — ");
+  const cible = document.getElementById("sessClasse");
+  if (cible) cible.value = label;
+  appliquerOrientation(niveau);
+  _majResumeSession();
+}
+
+/** Met à jour les indicateurs de la barre résumé (étapes ①→④) à partir des champs de configuration. */
+function _majResumeSession() {
+  const etab = document.getElementById("sessEtablissement")?.value || "—";
+  const niveau = document.getElementById("sessNiveau")?.value || "";
+  const groupe = document.getElementById("sessGroupe")?.value || "";
+  const ng = [niveau, groupe].filter(Boolean).join(" — ") || "—";
+  const enseignant = _getNomEnseignant();
+  const dateVal = document.getElementById("sessDate")?.value || "";
+  const dateStr = dateVal ? new Date(dateVal).toLocaleDateString("fr-FR") : "—";
+
+  const sbEtab = document.getElementById("sbEtablissement");
+  const sbNG   = document.getElementById("sbNiveauGroupe");
+  const sbEns  = document.getElementById("sbEnseignant");
+  const sbDate = document.getElementById("sbDate");
+  if (sbEtab) sbEtab.textContent = etab;
+  if (sbNG)   sbNG.textContent   = ng;
+  if (sbEns)  sbEns.textContent  = enseignant;
+  if (sbDate) sbDate.textContent = dateStr;
+}
+
+function effacer() {
+  if (!confirm("Effacer toutes les saisies et la sauvegarde localStorage ?")) return;
+  for (let i = 1; i <= 30; i++) {
+    document.getElementById("p" + i).value = "";
+    for (let j = 0; j < 10; j++) document.getElementById("o" + i + "_" + j).value = "";
+    document.getElementById("err" + i).textContent = "";
+  }
+  document.getElementById("resultatEtape1").style.display = "none";
+  document.getElementById("importInfo").textContent = "";
+  eleves = [];
+  axesChoisis = [];
+  elementsActifs = {};
+  localStorage.removeItem("DI_GYM_SAUVEGARDE");
+  mettreAJourCompteur();
+  console.log("[DI-GYM] Saisies et sauvegarde effacées.");
+}
+
+// Init slider
+updateSlider();
+
+// ─────────────────────────────────────────────────────────────────────
+// COMPTEUR ÉLÈVES EN TEMPS RÉEL
+// ─────────────────────────────────────────────────────────────────────
+function mettreAJourCompteur() {
+  let nb = 0;
+  for (let i = 1; i <= 30; i++) {
+    if (document.getElementById("p" + i)?.value.trim()) nb++;
+  }
+  const el = document.getElementById("compteurEleves");
+  if (el) el.textContent = nb + " / 30 élèves";
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// SAUVEGARDE / CHARGEMENT localStorage — V10 robuste
+// ─────────────────────────────────────────────────────────────────────
+const CLE_SAUVEGARDE = "DI_GYM_SAUVEGARDE";
+
+function _collecterDonneesEleves() {
+  const donneesEleves = [];
+  for (let i = 1; i <= 30; i++) {
+    const eleve = {
+      prenom: document.getElementById("p" + i)?.value || "",
+      observations: []
+    };
+    for (let j = 0; j < 10; j++) {
+      const champ = document.getElementById(`o${i}_${j}`);
+      eleve.observations.push(champ ? champ.value : "");
+    }
+    donneesEleves.push(eleve);
+  }
+  return donneesEleves;
+}
+
+function _afficherToast(message, couleur) {
+  const couleurs = { vert:"var(--vert)", bleu:"var(--bleu)", or:"var(--or)", rouge:"var(--rouge)" };
+  let toast = document.getElementById("_di_toast");
+  if (!toast) {
+    toast = document.createElement("div");
+    toast.id = "_di_toast";
+    document.body.appendChild(toast);
+  }
+  toast.style.cssText = `position:fixed;bottom:20px;right:20px;z-index:9999;
+    padding:10px 18px;border-radius:8px;font-size:.82rem;font-weight:700;
+    box-shadow:0 3px 12px rgba(0,0,0,.25);transition:opacity .4s;pointer-events:none;
+    background:${couleurs[couleur]||couleurs.bleu};color:#fff;opacity:1;`;
+  toast.textContent = message;
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => { toast.style.opacity = "0"; }, 2500);
+}
+
+function _flashSaveStatus() {
+  const el = document.getElementById("saveStatus");
+  if (!el) return;
+  el.classList.add("visible");
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove("visible"), 2000);
+}
+
+function sauvegarderDonnees(silencieux = false) {
+  try {
+    const donneesEleves = _collecterDonneesEleves();
+    // Lire l'enseignant depuis le select ou le champ libre
+    const sel = document.getElementById("sessSelectEnseignant");
+    const enseignant = (sel && sel.value === "__autre__")
+      ? (document.getElementById("sessEnseignant")?.value || "")
+      : (sel?.value || document.getElementById("sessEnseignant")?.value || "");
+    const sauvegarde = {
+      version: "V13",
+      date: new Date().toISOString(),
+      session: {
+        enseignant,
+        selectValeur:   sel?.value || "",
+        classe:         document.getElementById("sessClasse")?.value       || "",
+        dateCollecte:   document.getElementById("sessDate")?.value         || "",
+        etablissement:  document.getElementById("sessEtablissement")?.value || "",
+        anneeScolaire:  document.getElementById("sessAnnee")?.value         || "",
+        niveau:         document.getElementById("sessNiveau")?.value        || "",
+        groupe:         document.getElementById("sessGroupe")?.value        || ""
+      },
+      donneesEleves,
+      elevesAnalyse: eleves,
+      axesChoisis,
+      nbSeances,
+      elementsActifs
+    };
+    localStorage.setItem(CLE_SAUVEGARDE, JSON.stringify(sauvegarde));
+    console.log("[DI-GYM] Sauvegarde effectuée :", sauvegarde);
+    mettreAJourCompteur();
+    _flashSaveStatus();
+    if (!silencieux) _afficherToast("💾 Données sauvegardées", "vert");
+  } catch (err) {
+    console.error("[DI-GYM] Erreur sauvegarde :", err);
+    if (!silencieux) alert("❌ Erreur sauvegarde : " + err.message);
+  }
+}
+
+function chargerDonnees(silencieux = false) {
+  try {
+    const brut = localStorage.getItem(CLE_SAUVEGARDE);
+    if (!brut) {
+      if (!silencieux) _afficherToast("⚠️ Aucune sauvegarde trouvée", "or");
+      return false;
+    }
+    const sauvegarde = JSON.parse(brut);
+    console.log("[DI-GYM] Chargement :", sauvegarde);
+
+    // Session
+    if (sauvegarde.session) {
+      const s = sauvegarde.session;
+      if (s.classe)       document.getElementById("sessClasse").value     = s.classe;
+      if (s.dateCollecte) document.getElementById("sessDate").value       = s.dateCollecte;
+      if (s.etablissement !== undefined) document.getElementById("sessEtablissement").value = s.etablissement;
+      if (s.anneeScolaire)               document.getElementById("sessAnnee").value         = s.anneeScolaire;
+      if (s.niveau)                      document.getElementById("sessNiveau").value         = s.niveau;
+      if (s.groupe)                      document.getElementById("sessGroupe").value         = s.groupe;
+      appliquerOrientation(document.getElementById("sessNiveau")?.value || "");
+      // Restaurer le select et/ou le champ libre enseignant
+      const sel = document.getElementById("sessSelectEnseignant");
+      if (sel && s.selectValeur) {
+        sel.value = s.selectValeur;
+        if (s.selectValeur === "__autre__") {
+          document.getElementById("sessAutreWrap").classList.add("visible");
+          if (s.enseignant) document.getElementById("sessEnseignant").value = s.enseignant;
+        }
+      } else if (sel && s.enseignant) {
+        // Compat V10/V11/V12 : chercher dans les options
+        const opt = Array.from(sel.options).find(o => o.value === s.enseignant);
+        if (opt) {
+          sel.value = s.enseignant;
+        } else if (s.enseignant) {
+          sel.value = "__autre__";
+          document.getElementById("sessAutreWrap").classList.add("visible");
+          document.getElementById("sessEnseignant").value = s.enseignant;
+        }
+      }
+    }
+    // Élèves — compat V8 (tableau direct) et V10 (objet.donneesEleves)
+    const donneesEleves = sauvegarde.donneesEleves || sauvegarde;
+    if (Array.isArray(donneesEleves)) {
+      donneesEleves.forEach((e, idx) => {
+        const i = idx + 1;
+        const pf = document.getElementById("p" + i);
+        if (pf) pf.value = e.prenom || "";
+        (e.observations || []).forEach((v, j) => {
+          const ch = document.getElementById(`o${i}_${j}`);
+          if (ch) ch.value = v;
+        });
+      });
+    }
+    // État global
+    if (sauvegarde.elementsActifs && typeof sauvegarde.elementsActifs === "object") {
+      elementsActifs = sauvegarde.elementsActifs;
+    }
+    if (Array.isArray(sauvegarde.elevesAnalyse) && sauvegarde.elevesAnalyse.length > 0) {
+      eleves = sauvegarde.elevesAnalyse;
+      afficherResultats();
+      document.getElementById("resultatEtape1").style.display = "block";
+    }
+    if (Array.isArray(sauvegarde.axesChoisis)) axesChoisis = sauvegarde.axesChoisis;
+    if (typeof sauvegarde.nbSeances === "number") {
+      nbSeances = sauvegarde.nbSeances;
+      const sl = document.getElementById("sliderSeances");
+      if (sl) { sl.value = nbSeances; updateSlider(); }
+    }
+    mettreAJourCompteur();
+    _syncClasseLabel();
+    if (!silencieux) _afficherToast("📂 Données restaurées", "bleu");
+    return true;
+  } catch (err) {
+    console.error("[DI-GYM] Erreur chargement :", err);
+    if (!silencieux) alert("❌ Erreur chargement : " + err.message);
+    return false;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// EXPORT / IMPORT JSON — sauvegarde portable fiable
+// ─────────────────────────────────────────────────────────────────────
+function exporterJSON() {
+  sauvegarderDonnees(true);
+  const brut = localStorage.getItem(CLE_SAUVEGARDE);
+  if (!brut) { alert("Aucune donnée à exporter."); return; }
+  const blob = new Blob([brut], { type: "application/json;charset=utf-8" });
+  const now = new Date();
+  const ds = now.getFullYear() + ("0"+(now.getMonth()+1)).slice(-2) + ("0"+now.getDate()).slice(-2);
+  const classe = document.getElementById("sessClasse")?.value.replace(/\s/g,"_") || "classe";
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `DI-GYM_${classe}_${ds}.json`;
+  a.click();
+  _afficherToast("⬇ Fichier JSON exporté", "bleu");
+}
+
+function importerJSON(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      const data = JSON.parse(ev.target.result);
+      localStorage.setItem(CLE_SAUVEGARDE, JSON.stringify(data));
+      chargerDonnees(false);
+      _afficherToast("📤 Fichier JSON importé", "vert");
+    } catch(e) {
+      alert("❌ Fichier JSON invalide : " + e.message);
+    }
+  };
+  reader.readAsText(file, "UTF-8");
+  event.target.value = "";
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// LIGNE MÉTA (établissement / année / niveau / groupe / enseignant / date)
+// insérée en tête des exports CSV — ne perturbe pas la ré-importation
+// (importerCSV traite les colonnes OBS01_xxx / degrés, pas ce format).
+// ─────────────────────────────────────────────────────────────────────
+function _ligneMetaCSV() {
+  const etab   = document.getElementById("sessEtablissement")?.value || "";
+  const annee  = document.getElementById("sessAnnee")?.value || "";
+  const classe = document.getElementById("sessClasse")?.value || "";
+  const ens    = _getNomEnseignant().replace(/—/g, "").trim();
+  const dateVal = document.getElementById("sessDate")?.value || "";
+  const dateStr = dateVal ? new Date(dateVal).toLocaleDateString("fr-FR") : "";
+  return `# Établissement;${etab}\n# Année scolaire;${annee}\n# Classe;${classe}\n# Enseignant(e);${ens}\n# Date diagnostic;${dateStr}\n`;
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// EXPORT CSV — NOM DE FICHIER CORRIGÉ
+// ─────────────────────────────────────────────────────────────────────
+function exportCSV() {
+  const BOM = "\uFEFF";
+  const cols = ["Prénom","OE","R.AV","R.AR","RV.S","RV.D","Att.","Diff.A","Diff.B","Diff.C","Observation","Moyenne","Note/20","Rang","Profil","Profil détaillé","Lacune 1","SA recommandée"];
+  let csv = BOM + _ligneMetaCSV() + cols.join(";") + "\n";
+  const triés = [...eleves].sort((a,b) => b.moy - a.moy);
+  triés.forEach((e,i) => {
+    const degs = e.scores.map(s => s >= DEG_SCORE.D3 ? "D3" : s >= DEG_SCORE.D2 ? "D2" : s >= DEG_SCORE.D1 ? "D1" : "D0");
+    csv += [
+      e.prenom, ...degs, ...e.diffScores,
+      e.observation || "",
+      e.moy.toFixed(2), (e.moy*2).toFixed(2), i+1,
+      e.profil, e.profilDetail.join(" / "),
+      e.lacunes.length > 0 ? OBS_NOMS[e.lacunes[0].obs] + " : " + e.lacunes[0].score+"/10" : "Aucune",
+      e.sa
+    ].join(";") + "\n";
+  });
+  const now = new Date();
+  const ds = now.getFullYear() + ("0"+(now.getMonth()+1)).slice(-2) + ("0"+now.getDate()).slice(-2);
+  const classe = document.getElementById("sessClasse")?.value.replace(/\s/g,"_") || "classe";
+  const a = document.createElement("a");
+  a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
+  a.download = `DI-GYM_${classe}_${ds}.csv`;
+  a.click();
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// EXPORT PLANIFICATION CSV (étape 4)
+// ─────────────────────────────────────────────────────────────────────
+function exporterPlanifCSV() {
+  if (axesChoisis.length === 0) { alert("Génère d'abord la planification (étape 4)."); return; }
+  const BOM = "\uFEFF";
+  const nb = axesChoisis.length <= 3 ? 3 : 4;
+  const dist = DISTRIB[nb][nbSeances - 6];
+  let csv = BOM + _ligneMetaCSV() + "Séquence;Séance;Axe;Objectif;Groupe A — Consigne;Groupe A — CR;Groupe B — Consigne;Groupe B — CR;Groupe C — Consigne;Groupe C — CR\n";
+  let numS = 0;
+  dist.forEach((nbSea, seqIdx) => {
+    const axIdx = axesChoisis[Math.min(seqIdx, axesChoisis.length - 1)];
+    const ax = AXES_REF[axIdx];
+    for (let s = 0; s < nbSea; s++) {
+      numS++;
+      const cA = genContenu("A", ax, seqIdx, s);
+      const cB = genContenu("B", ax, seqIdx, s);
+      const cC = genContenu("C", ax, seqIdx, s);
+      csv += [seqIdx+1, numS, ax.id, ax.objectif, cA.consigne, cA.cr, cB.consigne, cB.cr, cC.consigne, cC.cr]
+        .map(v => `"${String(v).replace(/"/g,'""')}"`)
+        .join(";") + "\n";
+    }
+  });
+  const now = new Date();
+  const ds = now.getFullYear() + ("0"+(now.getMonth()+1)).slice(-2) + ("0"+now.getDate()).slice(-2);
+  const classe = document.getElementById("sessClasse")?.value.replace(/\s/g,"_") || "classe";
+  const a = document.createElement("a");
+  a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
+  a.download = `DI-GYM_planif_${classe}_${ds}.csv`;
+  a.click();
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// ÉCOUTEURS GLOBAUX
+// ─────────────────────────────────────────────────────────────────────
+// Sauvegarde auto silencieuse + compteur à chaque modification
+document.addEventListener("change", () => {
+  mettreAJourCompteur();
+  sauvegarderDonnees(true);
+});
+document.addEventListener("input", () => {
+  mettreAJourCompteur();
+});
+
+// Chargement automatique au démarrage
+// initRows() est une IIFE synchrone → les champs existent déjà ici
+setTimeout(() => {
+  chargerDonnees(true);
+  mettreAJourCompteur();
+  console.log("[DI-GYM] V13 prêt.");
+}, 0);
+
+// ─────────────────────────────────────────────────────────────────────
+// SÉLECTION ENSEIGNANT (V13)
+// ─────────────────────────────────────────────────────────────────────
+
+/** Appelé quand l'utilisateur change la valeur du select enseignant. */
+function changerEnseignant() {
+  const sel   = document.getElementById("sessSelectEnseignant");
+  const wrap  = document.getElementById("sessAutreWrap");
+  const input = document.getElementById("sessEnseignant");
+  if (sel.value === "__autre__") {
+    wrap.classList.add("visible");
+    input.focus();
+  } else {
+    wrap.classList.remove("visible");
+    input.value = "";
+  }
+  sauvegarderDonnees(true);
+}
+
+/** Retourne le nom de l'enseignant selon la sélection active. */
+function _getNomEnseignant() {
+  const sel = document.getElementById("sessSelectEnseignant");
+  if (!sel) return document.getElementById("sessEnseignant")?.value || "—";
+  if (sel.value === "__autre__") return document.getElementById("sessEnseignant")?.value || "—";
+  return sel.value || "—";
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// THÈME CLAIR / SOMBRE — V11
+// ─────────────────────────────────────────────────────────────────────
+
+/**
+ * Applique le thème donné ('dark' ou 'light') à l'interface.
+ * Met à jour l'icône, le label du bouton et sauvegarde dans localStorage.
+ */
+function appliquerTheme(theme) {
+  const html   = document.documentElement;
+  const icon   = document.getElementById("themeIcon");
+  const label  = document.getElementById("themeLabel");
+
+  if (theme === "dark") {
+    html.classList.add("dark");
+    if (icon)  icon.textContent  = "☀️";
+    if (label) label.textContent = "Mode clair";
+  } else {
+    html.classList.remove("dark");
+    if (icon)  icon.textContent  = "🌙";
+    if (label) label.textContent = "Mode sombre";
+  }
+  localStorage.setItem("DI_GYM_THEME", theme);
+}
+
+/** Bascule entre les deux thèmes. */
+function basculerTheme() {
+  const estSombre = document.documentElement.classList.contains("dark");
+  appliquerTheme(estSombre ? "light" : "dark");
+}
+
+/** Restaure le thème sauvegardé au démarrage (ou 'light' par défaut). */
+(function restaurerTheme() {
+  const theme = localStorage.getItem("DI_GYM_THEME") || "light";
+  appliquerTheme(theme);
+})();
+
+// ─────────────────────────────────────────────────────────────────────
+// FICHE TERRAIN — V14
+// _construireFicheTerrain() = HTML partagé par les 3 actions ci-dessous
+// 📄 telechargerFicheTerrain  → popup impression  (Ctrl+P)
+// 💾 enregistrerFicheHTML     → fichier .html téléchargé directement
+// 📑 imprimerFichePDF         → popup → "Enregistrer en PDF" via Ctrl+P
+// ─────────────────────────────────────────────────────────────────────
+
+/**
+ * Construit le HTML complet de la fiche terrain avec les données saisies.
+ * @param {boolean} avecAutoprint  Si true, ajoute window.print() au chargement.
+ */
+function _construireFicheTerrain(avecAutoprint) {
+  const nomEnseignant = _getNomEnseignant().replace(/—/g, "").trim();
+  const nomClasse     = document.getElementById("sessClasse")?.value.trim() || "";
+  const nomEtab       = document.getElementById("sessEtablissement")?.value.trim() || "";
+  const anneeScol     = document.getElementById("sessAnnee")?.value.trim() || "";
+  const dateVal       = document.getElementById("sessDate")?.value || "";
+  const dateStr       = dateVal ? new Date(dateVal).toLocaleDateString("fr-FR") : "";
+  const dateExport    = new Date().toLocaleDateString("fr-FR");
+
+  // ── Lire les 30 élèves depuis le DOM ──
+  const lignes = Array.from({ length: 30 }, (_, idx) => {
+    const i      = idx + 1;
+    const prenom = document.getElementById("p" + i)?.value || "";
+    const rayure = idx % 2 === 1 ? ' style="background:#f5f8fc"' : '';
+
+    // Colonnes 0-5 : select D0/D1/D2/D3 avec couleur sémantique
+    const COULEUR_DEG = { D0: "#C0392B", D1: "#D97706", D2: "#1A6B3A", D3: "#1B3A5C" };
+    let cells = "";
+    for (let j = 0; j < 10; j++) {
+      const val = document.getElementById(`o${i}_${j}`)?.value || "";
+      if (j <= 5) {
+        // Degrés colorés
+        const col = val ? ` style="font-weight:700;color:${COULEUR_DEG[val] || '#111'}"` : "";
+        cells += `<td${col}>${val}</td>`;
+      } else {
+        // Numérique (Diff A/B/C) ou texte libre (Observation)
+        cells += `<td>${val}</td>`;
+      }
+    }
+    return `<tr${rayure}><td style="text-align:center;color:#888">${i}</td><td style="text-align:left;padding-left:3px">${prenom}</td>${cells}</tr>`;
+  }).join("");
+
+  const scriptImpression = avecAutoprint
+    ? `<script>window.onload=function(){window.print();}<\/script>`
+    : "";
+
+  return `<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Fiche terrain DI-GYM${nomClasse ? " — " + nomClasse : ""}</title>
+<style>
+  @page { size: A4 landscape; margin: 11mm 9mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; font-size: 9px; color: #111; }
+  h1   { font-size: 13px; text-align: center; color: #1B3A5C; margin-bottom: 2px; }
+  .meta { text-align: center; font-size: 8px; color: #555; margin-bottom: 7px; }
+  .champs { display: flex; gap: 18px; margin-bottom: 7px; font-size: 9px; }
+  .champs span { border-bottom: 1px solid #444; flex: 1; padding-bottom: 2px; }
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #1B3A5C; color: #fff; padding: 4px 3px;
+       text-align: center; font-size: 8px; white-space: nowrap; }
+  th.ex { background: #2B5F8E; }
+  td { border: 1px solid #ccc; padding: 3px 3px; height: 17px;
+       font-size: 8px; text-align: center; vertical-align: middle; }
+  .legende { margin-top: 6px; font-size: 8px; color: #444; line-height: 1.7; }
+  .footer  { margin-top: 8px; font-size: 7px; color: #aaa; text-align: center; }
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+<h1>🤸 DI-GYM — Fiche de collecte terrain · Gymnastique au sol</h1>
+<p class="meta">ADP 2026 · CRMEF Souss-Massa · Section EPS</p>
+<div class="champs">
+  <span>Enseignant(e) : <strong>${nomEnseignant || "________________________________"}</strong></span>
+  <span>Classe : <strong>${nomClasse || "______________"}</strong></span>
+  <span>Date diagnostic : <strong>${dateStr || "______________"}</strong></span>
+</div>
+<div class="champs">
+  <span>Établissement : <strong>${nomEtab || "________________________________"}</strong></span>
+  <span>Année scolaire : <strong>${anneeScol || "______________"}</strong></span>
+</div>
+<table>
+  <thead>
+    <tr>
+      <th rowspan="3" style="width:22px">N°</th>
+      <th rowspan="3" style="width:88px">Prénom / Nom</th>
+      <th rowspan="3" style="width:36px">Org/<br>Esp</th>
+      <th colspan="5" class="ex">Exécution</th>
+      <th rowspan="3" style="width:34px">Diff.<br>A /12</th>
+      <th rowspan="3" style="width:34px">Diff.<br>B /12</th>
+      <th rowspan="3" style="width:34px">Diff.<br>C /12</th>
+      <th rowspan="3" style="width:88px">Observation</th>
+    </tr>
+    <tr>
+      <th colspan="2" class="ex">Roulement</th>
+      <th colspan="2" class="ex">Renversement</th>
+      <th rowspan="2" class="ex" style="width:36px">Attit.</th>
+    </tr>
+    <tr>
+      <th class="ex" style="width:36px">R.AV</th>
+      <th class="ex" style="width:36px">R.AR</th>
+      <th class="ex" style="width:36px">RV.S</th>
+      <th class="ex" style="width:36px">RV.D</th>
+    </tr>
+  </thead>
+  <tbody>${lignes}</tbody>
+</table>
+<p class="legende">
+  <strong>Légende degrés :</strong>&nbsp;
+  <span style="color:#C0392B;font-weight:700">D0</span> = Faible &nbsp;·&nbsp;
+  <span style="color:#D97706;font-weight:700">D1</span> = Moyen &nbsp;·&nbsp;
+  <span style="color:#1A6B3A;font-weight:700">D2</span> = Bon &nbsp;·&nbsp;
+  <span style="color:#1B3A5C;font-weight:700">D3</span> = Parfait
+  &nbsp;&nbsp;|&nbsp;&nbsp;
+  <strong>Diff. A/B/C :</strong> nombre d'éléments réalisés (0–12)
+</p>
+<p class="footer">
+  DI-GYM V14 · Meryem Sabeq · Aya Es-Sebyty · Latefa Oudbir · Imad Jeddi ·
+  ADP 2026 CRMEF Souss-Massa · Exporté le ${dateExport}
+</p>
+${scriptImpression}
+</body>
+</html>`;
+}
+
+// ── Utilitaire interne : crée un Blob et déclenche le téléchargement .html
+function _telechargerBlobHTML(html, nomFichier) {
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href     = url;
+  a.download = nomFichier;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 15000);
+}
+
+// ── Utilitaire interne : calcule le nom de fichier avec classe + date
+function _nomFichierFiche(prefixe) {
+  const classe  = document.getElementById("sessClasse")?.value.trim().replace(/\s+/g, "-") || "classe";
+  const dateVal = document.getElementById("sessDate")?.value || new Date().toISOString().slice(0, 10);
+  return `${prefixe}_${classe}_${dateVal}.html`;
+}
+
+// ── 📄 Ouvrir dans un popup → impression manuelle (Ctrl+P)
+function telechargerFicheTerrain() {
+  const html = _construireFicheTerrain(true);
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const url  = URL.createObjectURL(blob);
+  const win  = window.open(url, "_blank", "width=1100,height=740");
+  if (!win) {
+    // Popup bloqué → fallback téléchargement direct
+    _telechargerBlobHTML(html, _nomFichierFiche("Fiche_Terrain_DI-GYM"));
+    _afficherToast("📄 Popup bloqué — fiche sauvegardée, ouvrir puis Ctrl+P", "or");
+  } else {
+    _afficherToast("📄 Fiche ouverte — Ctrl+P pour imprimer", "bleu");
+  }
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
+}
+
+// ── 💾 Télécharger directement en HTML (archive · partage · réouverture)
+function enregistrerFicheHTML() {
+  const html = _construireFicheTerrain(false); // sans auto-print
+  _telechargerBlobHTML(html, _nomFichierFiche("Fiche_Terrain_DI-GYM"));
+  _afficherToast("💾 Fiche enregistrée en HTML", "vert");
+}
+
+// ── 📑 Popup optimisé impression → choisir "Enregistrer en PDF" via Ctrl+P
+function imprimerFichePDF() {
+  const html = _construireFicheTerrain(true);
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const url  = URL.createObjectURL(blob);
+  const win  = window.open(url, "_blank", "width=1100,height=740");
+  if (!win) {
+    _afficherToast("⚠️ Popups bloqués — autorisez-les puis réessayez", "or");
+  } else {
+    _afficherToast("📑 Dans la boîte d'impression → Destination : Enregistrer en PDF", "bleu");
+  }
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// MODALE GUIDE IA (V12)
+// ─────────────────────────────────────────────────────────────────────
+
+function ouvrirModaleIA() {
+  document.getElementById("modalIA").classList.add("open");
+  document.getElementById("copyConfirm").classList.remove("visible");
+  // Fermeture avec Échap
+  document.addEventListener("keydown", _ecapModale);
+}
+
+function fermerModaleIA() {
+  document.getElementById("modalIA").classList.remove("open");
+  document.removeEventListener("keydown", _ecapModale);
+}
+
+/** Ferme la modale si le clic est sur l'overlay (pas sur la modal-box). */
+function fermerModaleSiDehors(event) {
+  if (event.target === document.getElementById("modalIA")) {
+    fermerModaleIA();
+  }
+}
+
+/** Listener Échap — retiré dès la fermeture. */
+function _ecapModale(e) {
+  if (e.key === "Escape") fermerModaleIA();
+}
+
+/** Copie le texte du prompt dans le presse-papiers. */
+function copierPrompt() {
+  const texte = document.getElementById("promptTexte").innerText;
+  navigator.clipboard.writeText(texte).then(() => {
+    const conf = document.getElementById("copyConfirm");
+    conf.classList.add("visible");
+    clearTimeout(conf._t);
+    conf._t = setTimeout(() => conf.classList.remove("visible"), 2800);
+  }).catch(() => {
+    // Fallback pour navigateurs sans clipboard API
+    const ta = document.createElement("textarea");
+    ta.value = texte;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+    const conf = document.getElementById("copyConfirm");
+    conf.classList.add("visible");
+    clearTimeout(conf._t);
+    conf._t = setTimeout(() => conf.classList.remove("visible"), 2800);
+  });
+}
+</script>
+</body>
+</html>
